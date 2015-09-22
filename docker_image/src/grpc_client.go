@@ -5,6 +5,7 @@ import (
 	"log"
 	//"os"
 	pb "echo"
+	"flag"
 	"golang.org/x/net/context"
 	//"golang.org/x/oauth2"
 	//"golang.org/x/oauth2/google"
@@ -15,19 +16,20 @@ import (
 )
 
 const (
-	address = "ip_of_grpc_server:50051"
-	//https://developers.google.com/console/help/new/#serviceaccounts
-	serviceAccountJSONFile = "YOUR_JSON_CERT_FILE.json"
-	userinfo_scope         = "https://www.googleapis.com/auth/userinfo.email"
+	userinfo_scope = "https://www.googleapis.com/auth/userinfo.email"
 )
 
 var ()
 
 func main() {
 
-	//https://developers.google.com/identity/protocols/application-default-credentials
-	//os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", serviceAccountJSONFile)
+	address := flag.String("host", "localhost:50051", "host:port of gRPC server")
+	//serviceAccountJSONFile := flag.String("jsonfile", "your_service_account_json_file.json", "Google service account JSON file")
+	flag.Parse()
+
 	/*
+		//https://developers.google.com/identity/protocols/application-default-credentials
+		//os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", *serviceAccountJSONFile)
 		src, err := google.DefaultTokenSource(oauth2.NoContext, userinfo_scope)
 		if err != nil {
 			log.Fatalf("Unable to acquire token source: %v", err)
@@ -36,7 +38,7 @@ func main() {
 
 	// For JWTAccessTokens as authorization header
 	/*
-		dat, err := ioutil.ReadFile(serviceAccountJSONFile)
+		dat, err := ioutil.ReadFile(*serviceAccountJSONFile)
 		if err != nil {
 			log.Fatalf("Unable to read service account file %v", err)
 		}
@@ -49,6 +51,9 @@ func main() {
 		if err != nil {
 			log.Fatalf("Unable to acquire token source: %v", err)
 		}
+		// Reuse tokensource
+		// https://www.godoc.org/golang.org/x/oauth2#ReuseTokenSource
+		src = oauth2.ReuseTokenSource(tok,src)
 	*/
 
 	//https://github.com/golang/oauth2/issues/127
@@ -64,9 +69,8 @@ func main() {
 		log.Fatalf("Failed to generate credentials %v", err)
 	}
 
-	//conn, err := grpc.Dial(address, grpc.WithTransportCredentials(ce), grpc.WithPerRPCCredentials(creds))
-
-	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(ce))
+	//conn, err := grpc.Dial(*address, grpc.WithTransportCredentials(ce), grpc.WithPerRPCCredentials(creds))
+	conn, err := grpc.Dial(*address, grpc.WithTransportCredentials(ce))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}

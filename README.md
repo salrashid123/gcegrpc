@@ -54,7 +54,7 @@ export PATH=$PATH:`pwd`/bin
 protoc --go_out=plugins=grpc:. src/echo/echo.proto
 
 go run src/grpc_server.go 
-go run src/grpc_client.go
+go run src/grpc_client.go -host=localhost:50051
 ```
 
 Now build the image and test running the client/server
@@ -63,7 +63,7 @@ Now build the image and test running the client/server
 cd docker_image
 docker build -t gcpserver .
 docker run -t -p 8080:8080 -p 50051:50051 gcpserver
-go run src/grpc_client.go
+go run src/grpc_client.go -host=localhost:50051
 ```
   
 After that, tag the image and upload to your [docker.io](https://hub.docker.com/u/salrashid123/) repo.
