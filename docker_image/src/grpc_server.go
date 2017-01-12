@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"echo"
+
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -34,7 +35,7 @@ func (s *server) SayHelloStream(in *echo.EchoRequest, stream echo.EchoServer_Say
 	log.Println(ctx)
 
 	var respmdheader = metadata.MD{
-		"stream headerKey": []string{"val"},
+		"streamheaderkey": []string{"val"},
 	}
 	if err := grpc.SendHeader(ctx, respmdheader); err != nil {
 		log.Fatalf("grpc.SendHeader(%v, %v) = %v, want %v", ctx, respmdheader, err, nil)
@@ -44,7 +45,7 @@ func (s *server) SayHelloStream(in *echo.EchoRequest, stream echo.EchoServer_Say
 	stream.Send(&echo.EchoReply{Message: "Msg2 " + in.Name})
 
 	var respmdfooter = metadata.MD{
-		"stream trailerkey": []string{"val"},
+		"streamtrailerkey": []string{"val"},
 	}
 	grpc.SetTrailer(ctx, respmdfooter)
 
@@ -71,13 +72,13 @@ func (s *server) SayHello(ctx context.Context, in *echo.EchoRequest) (*echo.Echo
 	}
 
 	var respmdheader = metadata.MD{
-		"rpc headerKey": []string{"val"},
+		"rpcheaderkey": []string{"val"},
 	}
 	if err := grpc.SendHeader(ctx, respmdheader); err != nil {
 		log.Fatalf("grpc.SendHeader(%v, %v) = %v, want %v", ctx, respmdheader, err, nil)
 	}
 	var respmdfooter = metadata.MD{
-		"rpc trailerkey": []string{"val"},
+		"rpctrailerkey": []string{"val"},
 	}
 	grpc.SetTrailer(ctx, respmdfooter)
 
