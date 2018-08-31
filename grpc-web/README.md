@@ -28,7 +28,19 @@ All traffic is over SSL using the provided SSL cert with `CN=server.domain.com`
     sudo mv protoc3/bin/* /usr/local/bin/
     sudo mv protoc3/include/* /usr/local/include/
     ```
+  - Install protoc `go_out` 
+     - [https://github.com/golang/protobuf#installation](https://github.com/golang/protobuf#installation)
+     -   eg, make sure `$GOBIN` is in the `$PATH`, then
+     -   `go get -u github.com/golang/protobuf/protoc-gen-go`
 
+  - install `grpc-web` protoc plugin
+
+  ```bash
+    cd /tmp/
+    git clone https://github.com/grpc/grpc-web.git
+    cd grpc-web
+    sudo make install-plugin
+  ```
 
 
 4. set hostname
@@ -42,7 +54,7 @@ We're doing this for CORS and the provided cert CN/SNI settings
 
 5. build grpcServer
 
-```
+```bash
     cd app
     export GOPATH=`pwd`
 
@@ -76,6 +88,7 @@ We're doing this for CORS and the provided cert CN/SNI settings
 ```
 
 7. Generate javascript grpc libraries
+
 
 ```
     cd app
