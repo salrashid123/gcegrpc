@@ -71,9 +71,15 @@ func (s *server) SayHello(ctx context.Context, in *echo.EchoRequest) (*echo.Echo
 		//log.Println(md["sal"])
 	}
 
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		log.Println(md["authorization"])
+	}
+
 	var respmdheader = metadata.MD{
 		"rpcheaderkey": []string{"val"},
 	}
+	
 	if err := grpc.SendHeader(ctx, respmdheader); err != nil {
 		log.Fatalf("grpc.SendHeader(%v, %v) = %v, want %v", ctx, respmdheader, err, nil)
 	}

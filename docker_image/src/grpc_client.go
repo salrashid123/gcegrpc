@@ -83,7 +83,7 @@ func main() {
 		"key2": []string{"value2"},
 	}
 
-	ctx := metadata.NewContext(context.Background(), testMetadata)
+	ctx := metadata.NewOutgoingContext(context.Background(), testMetadata)
 
 	var header, trailer metadata.MD
 	r, err := c.SayHello(ctx, &pb.EchoRequest{Name: "unary RPC msg "}, grpc.Header(&header), grpc.Trailer(&trailer))
