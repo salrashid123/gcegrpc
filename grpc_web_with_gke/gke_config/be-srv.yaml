@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: be-srv
+  labels:
+    type: be-srv
+  annotations:
+    service.alpha.kubernetes.io/app-protocols: '{"be":"HTTP2"}'  
+spec:
+  type: NodePort 
+  ports:
+  - name: be
+    port: 18080
+    protocol: TCP
+    targetPort: 18080   
+  selector:
+    app: be

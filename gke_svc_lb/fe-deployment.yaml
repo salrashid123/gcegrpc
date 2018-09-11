@@ -1,0 +1,32 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: fe-deployment
+  labels:
+    app: fe
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: fe
+    spec:
+      containers:
+      - name: fe-container
+        image: gcr.io/mineral-minutia-820/http_frontend
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /_ah/health
+            port: 8081
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /_ah/health
+            scheme: HTTPS
+            port: 8081           
+        ports:
+        - containerPort: 8081
+          protocol: TCP                  
+        command: ["/http_server"]
+        args: ["--httpport", ":8081"]

@@ -1,0 +1,28 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: be-deployment
+  labels:
+    app: be
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: be
+    spec:
+      containers:
+      - name: envoy-container
+        image: salrashid123/grpc_envoyproxy
+        imagePullPolicy: Always          
+        ports:
+        - containerPort: 18080
+          protocol: TCP
+      - name: grpc-container
+        image: salrashid123/grpc_backend
+        imagePullPolicy: Always          
+        ports:
+        - containerPort: 50051
+          protocol: TCP
+        command: ["./grpc_server"]
+        args: ["-grpcport","0.0.0.0:50051"]

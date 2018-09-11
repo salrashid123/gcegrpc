@@ -1,0 +1,32 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: basic-ingress
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "gke-ingress"
+    kubernetes.io/ingress.allow-http: "false"  
+spec:
+  tls:
+  - secretName: fe-secret
+  rules:
+  - host: server.domain.com  
+    http:
+      paths:
+      - path: /*
+        backend:
+          serviceName: fe-srv
+          servicePort: 8000
+  - host: grpcweb.domain.com  
+    http:
+      paths:
+      - path: /*
+        backend:
+          serviceName: be-srv
+          servicePort: 18080
+  - host: grpc.domain.com  
+    http:
+      paths:
+      - path: /*
+        backend:
+          serviceName: be-srv-grpc
+          servicePort: 50051

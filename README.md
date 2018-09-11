@@ -1,176 +1,64 @@
 
-### LoadBalanced Appengine/ComputeEngine gRPC cluster
+# gRPC on GKE
 
 
-Sample code demonstrating gRPC server running in Google Appengine and on ComputeEngine in a LoadBalanced, failover config.
-
-The gRPC client/server example is derived from:  
-
-*  [gRPC Helloworld](https://github.com/grpc/grpc-go/tree/master/examples/helloworld)
-
-Note:  if you intend to just communicate container->container in GCE, you may want to utilize [GKE Services](https://github.com/salrashid123/kubehelloworld) or even manually by adding in sidecar services like [etcd](https://github.com/coreos/etcd)
-
-=====================
-
-For more information, see:
-*  [Container Optimized GCE image](https://cloud.google.com/compute/docs/containers/container_vms)
-*  [gRPC](http://www.grpc.io/)
-*  [Google Compute Engine Load Balancing](https://cloud.google.com/compute/docs/load-balancing/#network_load_balancing)
-*  [Google Appengine Managed VM](https://cloud.google.com/appengine/docs/managed-vms/)
-*  [google protobuf](https://github.com/google/protobuf)
+Samples for running gRPC on GKE:
 
 
-=====================
+## gRPC Loadbalancing on GKE with L7 Ingress
 
-***  
+`client_grpc_app  (via gRPC wire protocol) --> ingress --> (grpc Service on GKE)`
 
-###Overview
-The server part of the program is **both** an HTTP server and a gRPC server.  The HTTP server was added on to help with the GAE and GCE loadblanacer and healthchecker.
+- Folder: `gke_ingress_lb/`
 
-The HTTP server is configured to listen on :8080/_ah/health_
+## gRPC-web via Ingress
 
-Also see:
-* [GAE Healthcheck](https://cloud.google.com/appengine/docs/managed-vms/custom-runtimes#listen_to_port_8080)
-* [GCE Healthcheck](https://cloud.google.com/compute/docs/load-balancing/health-checks)
+ Javascript clients:  
+     
+`client(browser) (via grpc-web protocol) --> Ingress --> (grpc Service on GKE)`
+     
+ - Folder: `grpc_web_with_gke/`
+ - [grpc_web_with_gke](https://github.com/salrashid123/grpc_web_with_gke)
 
-![Call Flow](images/grpc_flow.png) 
+## gRPC for GKE internal Service->Service
 
-
-####Build  and run gRPC client/server
-
-The follwoing commands builds the gRPC client/server server locally.
-
-Note:  you must have **proto3** compiled for your system first.
-*  [proto3](https://github.com/google/protobuf)
-  
-
-```bash
-export GOPATH=/tmp/gcegrpc/docker_image
-go get golang.org/x/net/context
-go get google.golang.org/grpc
-go get golang.org/x/oauth2/...
-go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
-export PATH=$PATH:`pwd`/bin
-protoc --go_out=plugins=grpc:. src/echo/echo.proto
-
-go run src/grpc_server.go 
-go run src/grpc_client.go -host=localhost:50051
-```
-
-Now build the image and test running the client/server
-
-```bash
-cd docker_image
-docker build -t gcpserver .
-docker run -t -p 8080:8080 -p 50051:50051 gcpserver
-go run src/grpc_client.go -host=localhost:50051
-```
-  
-After that, tag the image and upload to your [docker.io](https://hub.docker.com/u/salrashid123/) repo.
-
-```
-docker tag -f gcpserver  yourdockerhub/gcpserver
-docker push yourdockerhub/gcpserver
-```
+- Folder `gke_svc_lb/`
+      
+`client (pod running in GKE) --> k8s Service --> (gRPC endpoint in same GKE cluster)`
 
 
-####Deploy gRPC and HTTP server to GAE
+## gRPC agaisnt Managed Instance Group with Container Optimized OS
 
-**NOTE**: running an LB cluster like this is of very limited use because you have manually address each node by its public IP or keep manually retargeting an unmanaged instance group.  This section was just added to demonstrate how to access a managedVM directly; nothing more.
+- Folder `gce`
 
-```bash
-gcloud preview app deploy app.yaml --version 1 --set-default
-```
+`client_grpc_app --> L7LB --> ManagedInstanceGroup`
 
-To access the server from a remote client, you will need to open up a firewall rule for :50051 to the GAE instance IP directly or manually create an unmanaged instance group with that target.  Unfortunately, at the moment, there is no way to target an LB pool with all GAE instances directly.
+---
 
-```
-gcloud compute firewall-rules create grpc-firewall \
-    --target-tags grpcserver --allow tcp:50051
-```
+## Source and Dockerfile
 
-When the managed VM is up, you can access it directly on the IP its availble at: *104.197.85.10*
-![GAE IP](images/gae_mvm.png) 
+You can find the source here:
 
-Alternatively, you can attach the instances to an LB pool that is HTTP balanced:  In the example below, the only managedVM thats in use is *gae-default-1-n5xs*
+- Client and Server: [app/grpc_backend/](app/grpc_backend)
 
-```
-gcloud compute  forwarding-rules create grpcfwd --region us-central1 \
-    --ip-protocol TCP --port-range 8080-50051 --target-pool tpgrpc
+And the various docker images on dockerhub
 
-gcloud compute http-health-checks create httpcheck \
-    --port 8080 --request-path "/_ah/health" 
+- `docker.io/salrashid123/grpc_backend`
 
-gcloud compute  target-pools create tpgrpc --health-check httpcheck \
-    --region us-central1 
+To run the gRPC server locally to see message replay:
 
-gcloud compute - target-pools add-instances tpgrpc --zone us-central1-f \
-    --instances gae-default-1-n5xs
-```
+- Server:
+    `docker run  -p 50051:50051 -t salrashid123/grpc_backend ./grpc_server -grpcport 0.0.0.0:50051`
 
-The follwoing shows the GAE instance part of a loadbalancer thts manually targeted.  The obvious problem with manually targeting a pool for managedVMs is that everytime the VM is recycled, it acquires a new name so this method is not at all feasible to implement.  It was just cited as an example.
+- Client:
+    `docker run --net=host --add-host grpc.domain.com:127.0.0.1 -t salrashid123/grpc_backend /grpc_client --host grpc.domain.com:50051`  
 
-![GAE LB](images/gae_lb.png) 
+What client app makes ONE connection out to the Server and then proceeds to send 10 RPC calls over that conn.  For each call, the server
+will echo back the hostname of the server/pod that handled that request.  In the example here locally, it will be all from one host.
 
-####Deploy gRPC and HTTP server to GCE
+## References
 
-```bash
-gcloud compute instance-templates create grpctemplate \
-    --tag grpcserver --image container-vm \
-    --metadata-from-file google-container-manifest=containers.yaml \
-    --machine-type f1-micro
-
-gcloud compute firewall-rules create grpc-firewall \
-    --target-tags grpcserver --allow tcp:50051
-
-gcloud compute firewall-rules create allow-httpalt \
-    --allow tcp:8080  --target-tags grpcserver
-
-gcloud compute http-health-checks create httpcheck \
-    --port 8080 --request-path "/_ah/health" 
-
-gcloud compute  target-pools create tphttp \
-    --health-check httpcheck --region us-central1
-
-gcloud compute forwarding-rules create fwdgrpc \
-    --region us-central1 --ip-protocol TCP \
-    --port-range 8080-50051 --target-pool tphttp
-
-gcloud compute instance-groups managed create grpcgroup \
-    --zone us-central1-a --base-instance-name grpc \
-    --size 2 --template grpctemplate \
-    --target-pool tphttp
-
-```
-
-The following shows two instances that are part of the instance group in up, healthy state:
-
-![LB Config](images/lb_up.png) 
-
-####Authentication/Authorization
-
-The server and client does have some code that is commented out by default demonstrating passing in oauth2 access_tokens and enabling id_tokens.  The tokens maybe passed into the gRPC context for validation on the remote side.  For more information, see:
-
-*  [JWT Debugger](http://jwt.io/)
-*  [Google certificates](https://www.googleapis.com/oauth2/v3/certs)
-*  [Verification of id_tokens](https://developers.google.com/identity/protocols/OpenIDConnect#validatinganidtokeng)
-
-#####HTTP server
-The following shows the grpc_server.go settings for the HTTPserver:
-
-```go
-func fronthandler(w http.ResponseWriter, r *http.Request) {
-        log.Println("Main Handler")
-        fmt.Fprint(w, "hello world")
-}
-func healthhandler(w http.ResponseWriter, r *http.Request) {
-        log.Println("heathcheck...")
-        fmt.Fprint(w, "ok")
-}
-func main() {
-        http.HandleFunc("/", fronthandler)
-        http.HandleFunc("/_ah/health", healthhandler)
-        go http.ListenAndServe(httpport, nil)
-```
-
-
+ - [https://grpc.io/blog/loadbalancing](https://grpc.io/blog/loadbalancing)
+ - [gRPC Loadbalancing on Kubernetes (Kubecon Europe 2018)](https://www.youtube.com/watch?v=F2znfxn_5Hg)
+ - [gRPC-web "helloworld"](https://github.com/salrashid123/gcegrpc/tree/master/grpc-web)
+ - [gRPC with curl](https://github.com/salrashid123/grpc_curl)

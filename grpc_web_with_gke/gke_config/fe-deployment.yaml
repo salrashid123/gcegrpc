@@ -1,0 +1,20 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: fe-deployment
+  labels:
+    app: fe
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: fe
+    spec:
+      containers:
+      - name: fe-container
+        image: salrashid123/web_frontend
+        imagePullPolicy: Always                   
+        ports:
+        - containerPort: 8000
+          protocol: TCP
