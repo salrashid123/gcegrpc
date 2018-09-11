@@ -27,7 +27,7 @@ Samples for running gRPC on GKE:
 `client (pod running in GKE) --> k8s Service --> (gRPC endpoint in same GKE cluster)`
 
 
-## gRPC agaisnt Managed Instance Group with Container Optimized OS
+## gRPC w/ Managed Instance Group with Container Optimized OS
 
 - Folder `gce`
 
@@ -43,7 +43,9 @@ You can find the source here:
 
 And the various docker images on dockerhub
 
+
 - `docker.io/salrashid123/grpc_backend`
+
 
 To run the gRPC server locally to see message replay:
 
