@@ -1,5 +1,5 @@
 
-# LoadBalanced Appengine/ComputeEngine gRPC cluster
+# gRPC --> GCE L7 lb --> Container Optimized Managed Instance groups
 
 
 Sample gRPC server set deployed as an autoscaled Instance Group running [Container Optimized OS](https://cloud.google.com/container-optimized-os/docs/how-to/run-container-instance).
