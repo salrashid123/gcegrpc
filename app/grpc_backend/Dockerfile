@@ -1,4 +1,4 @@
-FROM golang:1.8 as build
+FROM golang:1.10 as build
 
 RUN apt-get update -y && apt-get install -y build-essential wget unzip curl
 
@@ -11,16 +11,14 @@ RUN curl -OL https://github.com/google/protobuf/releases/download/v3.2.0/protoc-
 
 WORKDIR /go/
 
-RUN go get  github.com/golang/protobuf/proto \
-        golang.org/x/net/context \
+RUN go get golang.org/x/net/context \
+        golang.org/x/net/http2 \
         google.golang.org/grpc \
         google.golang.org/grpc/credentials \
         google.golang.org/grpc/health \
         google.golang.org/grpc/health/grpc_health_v1 \
-        google.golang.org/grpc/metadata \
-        golang.org/x/net/trace \
-        golang.org/x/net/http2 \
-        golang.org/x/net/http2/hpack
+        google.golang.org/grpc/metadata
+
 RUN go get -u github.com/golang/protobuf/protoc-gen-go        
 
 ADD . /go/

@@ -19,11 +19,14 @@ const (
 	userinfo_scope = "https://www.googleapis.com/auth/userinfo.email"
 )
 
-var ()
+var (
+	conn *grpc.ClientConn
+)
 
 func main() {
 
 	address := flag.String("host", "localhost:50051", "host:port of gRPC server")
+	insecure := flag.Bool("insecure", false, "connect without TLS")
 	flag.Parse()
 
 	ce, err := credentials.NewClientTLSFromFile("server_crt.pem", "")
@@ -31,8 +34,11 @@ func main() {
 		log.Fatalf("Failed to generate credentials %v", err)
 	}
 
-	conn, err := grpc.Dial(*address, grpc.WithTransportCredentials(ce))
-	//conn, err := grpc.Dial(*address, grpc.WithInsecure())
+	if *insecure == true {
+		conn, err = grpc.Dial(*address, grpc.WithInsecure())
+	} else {
+		conn, err = grpc.Dial(*address, grpc.WithTransportCredentials(ce))
+	}
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}

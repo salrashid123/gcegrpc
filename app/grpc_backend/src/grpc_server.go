@@ -22,6 +22,7 @@ import (
 var (
 	grpcport = flag.String("grpcport", "", "grpcport")
 	httpport = flag.String("httpport", ":8081", "httpport")
+	insecure = flag.Bool("insecure", false, "startup without TLS")
 )
 
 const ()
@@ -110,9 +111,12 @@ func main() {
 		Addr: *httpport,
 	}
 	http2.ConfigureServer(srv, &http2.Server{})
-	go srv.ListenAndServeTLS("server_crt.pem", "server_key.pem")
-	//go srv.ListenAndServe()
-	//go http.ListenAndServe(*httpport, nil)
+
+	if *insecure == true {
+		go srv.ListenAndServe()
+	} else {
+		go srv.ListenAndServeTLS("server_crt.pem", "server_key.pem")
+	}
 
 	ce, err := credentials.NewServerTLSFromFile("server_crt.pem", "server_key.pem")
 	if err != nil {
@@ -125,7 +129,9 @@ func main() {
 	}
 
 	sopts := []grpc.ServerOption{grpc.MaxConcurrentStreams(10)}
-	sopts = append(sopts, grpc.Creds(ce))
+	if *insecure == false {
+		sopts = append(sopts, grpc.Creds(ce))
+	}
 	s := grpc.NewServer(sopts...)
 
 	echo.RegisterEchoServerServer(s, &server{})
