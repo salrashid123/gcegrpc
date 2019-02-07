@@ -1,8 +1,8 @@
 
-# gRPC on GKE
+# gRPC on GKE and Istio
 
 
-Samples for running gRPC on GKE:
+Samples for running gRPC on GKE and Istio:
 
 
 ## gRPC Loadbalancing on GKE with L7 Ingress
@@ -32,6 +32,19 @@ Samples for running gRPC on GKE:
 - Folder `gce`
 
 `client_grpc_app --> L7LB --> ManagedInstanceGroup`
+
+
+## Istio gRPC Loadbalancing with GCP Internal LoadBalancer (ILB)
+
+- folder `istio/`
+
+`client_grpc_app (on GCEVM) --> (GCP ILB) --> Istio --> Service`
+
+`client_grpc_app (external) --> (GCP ExternalLB) --> Istio --> Service`
+
+Also see:
+- [Summary of Cloud load balancers](https://cloud.google.com/load-balancing/docs/choosing-load-balancer#summary_of_cloud_load_balancers)
+- [GCP LoadBalancing Overview](https://cloud.google.com/load-balancing/docs/load-balancing-overview#internal_tcpudp_load_balancing)
 
 ---
 
