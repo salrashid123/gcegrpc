@@ -4,7 +4,7 @@ package echo;
 
 service EchoServer {
   rpc SayHello (EchoRequest) returns (EchoReply) {}
-  rpc SayHelloStream(EchoRequest) returns (stream EchoReply) {}  
+  rpc SayHelloStream(EchoRequest) returns (stream EchoReply) {}    
 }
 
 message EchoRequest {

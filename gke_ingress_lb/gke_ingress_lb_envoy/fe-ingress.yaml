@@ -3,8 +3,7 @@ kind: Ingress
 metadata:
   name: fe-ingress
   annotations:
-    kubernetes.io/ingress.global-static-ip-name: "gke-ingress"
-    kubernetes.io/ingress.allow-http: "false"   
+    kubernetes.io/ingress.allow-http: "false"
 spec:
   tls:
   - hosts:
@@ -12,4 +11,4 @@ spec:
     secretName: fe-secret
   backend:
     serviceName: fe-srv-ingress
-    servicePort: 50051
+    servicePort: 8080

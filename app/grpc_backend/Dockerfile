@@ -25,19 +25,20 @@ ADD . /go/
 
 RUN protoc --go_out=plugins=grpc:. src/echo/echo.proto
 
+#RUN GRPC_HEALTH_PROBE_VERSION=v0.2.0 && \
+#    wget -qO/bin/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64 && \
+#    chmod +x /bin/grpc_health_probe
+
 RUN export GOBIN=/go/bin && go install src/grpc_server.go
 RUN export GOBIN=/go/bin && go install src/grpc_client.go
-
 
 FROM gcr.io/distroless/base
 COPY --from=build /go/server_crt.pem /
 COPY --from=build /go/server_key.pem /
 COPY --from=build /go/CA_crt.pem /
-COPY --from=build /go/bin /
+#COPY --from=build /go/bin /
 
-
-EXPOSE 8081
 EXPOSE 50051
 
-#ENTRYPOINT ["grpc_server", "--grpcport", ":50051", "--httpport", ":8081"]
+#ENTRYPOINT ["grpc_server", "--grpcport", ":50051"]
 #ENTRYPOINT ["grpc_client", "--host",  "server.domain.com:50051"]

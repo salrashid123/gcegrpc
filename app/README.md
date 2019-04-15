@@ -54,7 +54,7 @@ Edit /etc/hosts
 RUN Server
 
 ```
-go run src/grpc_server.go --grpcport 0.0.0.0:50051 --httpport :8081
+go run src/grpc_server.go --grpcport 0.0.0.0:50051
 ```
 
 RUN Cient

@@ -17,18 +17,16 @@ spec:
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
-            path: /_ah/health
-            port: 8081
+            path: /
+            port: 50051
             scheme: HTTPS
         readinessProbe:
           httpGet:
-            path: /_ah/health
+            path: /
             scheme: HTTPS
-            port: 8081           
+            port: 50051           
         ports:
         - containerPort: 50051
-          protocol: TCP
-        - containerPort: 8081
-          protocol: TCP                  
+          protocol: TCP                 
         command: ["./grpc_server"]
-        args: ["--grpcport", ":50051", "--httpport", ":8081"]
+        args: ["--grpcport", ":50051"]

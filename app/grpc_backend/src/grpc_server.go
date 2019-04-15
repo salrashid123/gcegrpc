@@ -4,37 +4,61 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
+
 	"net/http"
 	"os"
-
 	"echo"
+	"strings"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"golang.org/x/net/context"
-	"golang.org/x/net/http2"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/metadata"
 )
 
 var (
 	grpcport = flag.String("grpcport", "", "grpcport")
-	httpport = flag.String("httpport", ":8081", "httpport")
 	insecure = flag.Bool("insecure", false, "startup without TLS")
+
+	hs *health.Server
+
+	conn *grpc.ClientConn
 )
 
-const ()
+const (
+	address string = ":50051"
+)
 
 type server struct {
+}
+
+func isGrpcRequest(r *http.Request) bool {
+	return r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("Content-Type"), "application/grpc")
+}
+
+func (s *server) SayHello(ctx context.Context, in *echo.EchoRequest) (*echo.EchoReply, error) {
+
+	log.Println("Got rpc: --> ", in.Name)
+
+	var h, err = os.Hostname()
+	if err != nil {
+		log.Fatalf("Unable to get hostname %v", err)
+	}
+	return &echo.EchoReply{Message: "Hello " + in.Name + "  from hostname " + h}, nil
 }
 
 func (s *server) SayHelloStream(in *echo.EchoRequest, stream echo.EchoServer_SayHelloStreamServer) error {
 
 	log.Println("Got stream:  -->  ")
 	ctx := stream.Context()
-	//log.Println(ctx)
+	log.Println(ctx)
 
 	var respmdheader = metadata.MD{
 		"streamheaderkey": []string{"val"},
@@ -54,41 +78,25 @@ func (s *server) SayHelloStream(in *echo.EchoRequest, stream echo.EchoServer_Say
 	return nil
 }
 
-func (s *server) SayHello(ctx context.Context, in *echo.EchoRequest) (*echo.EchoReply, error) {
 
-	log.Println("Got rpc: --> ", in.Name)
-	//log.Println(ctx)
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		log.Println(md["authorization"])
-	}
+func hchandler(w http.ResponseWriter, r *http.Request) {
 
-	var respmdheader = metadata.MD{
-		"rpcheaderkey": []string{"val"},
-	}
-	if err := grpc.SendHeader(ctx, respmdheader); err != nil {
-		log.Fatalf("grpc.SendHeader(%v, %v) = %v, want %v", ctx, respmdheader, err, nil)
-	}
-	var respmdfooter = metadata.MD{
-		"rpctrailerkey": []string{"val"},
-	}
-	grpc.SetTrailer(ctx, respmdfooter)
+	//log.Print("service not in serving state: ")
+	//hs.SetServingStatus("echo.EchoServer", healthpb.HealthCheckResponse_NOT_SERVING)
+	//http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
 
-	var h, err = os.Hostname()
-	if err != nil {
-		log.Fatalf("Unable to get hostname %v", err)
-	}
-	return &echo.EchoReply{Message: "Hello " + in.Name + "  from hostname " + h}, nil
-}
-
-func fronthandler(w http.ResponseWriter, r *http.Request) {
-	//log.Println("Main Handler")
-	fmt.Fprint(w, "hello world")
-}
-
-func healthhandler(w http.ResponseWriter, r *http.Request) {
-	//log.Println("heathcheck...")
 	fmt.Fprint(w, "ok")
+}
+
+type healthServer struct{}
+// Check is used for gRPC health checks
+func (s *healthServer) Check(ctx context.Context, in *healthpb.HealthCheckRequest) (*healthpb.HealthCheckResponse, error) {
+	log.Printf("Handling grpc Check request")
+	return &healthpb.HealthCheckResponse{Status: healthpb.HealthCheckResponse_SERVING}, nil
+}
+// Watch is not implemented
+func (s *healthServer) Watch(in *healthpb.HealthCheckRequest, srv healthpb.Health_WatchServer) error {
+	return status.Error(codes.Unimplemented, "Watch is not implemented")
 }
 
 func main() {
@@ -100,44 +108,43 @@ func main() {
 		flag.Usage()
 		os.Exit(2)
 	}
-	if *httpport == "" {
-		fmt.Fprintln(os.Stderr, "missing -httpport flag, using defaults(:8080)")
-	}
 
-	http.HandleFunc("/", fronthandler)
-	http.HandleFunc("/_ah/health", healthhandler)
-
-	srv := &http.Server{
-		Addr: *httpport,
-	}
-	http2.ConfigureServer(srv, &http2.Server{})
-
-	if *insecure == true {
-		go srv.ListenAndServe()
-	} else {
-		go srv.ListenAndServeTLS("server_crt.pem", "server_key.pem")
-	}
-
-	ce, err := credentials.NewServerTLSFromFile("server_crt.pem", "server_key.pem")
+	ce, err := credentials.NewClientTLSFromFile("server_crt.pem", "")
 	if err != nil {
 		log.Fatalf("Failed to generate credentials %v", err)
 	}
 
-	lis, err := net.Listen("tcp", *grpcport)
+	if *insecure == true {
+		conn, err = grpc.Dial(address, grpc.WithInsecure())
+	} else {
+		conn, err = grpc.Dial(address, grpc.WithTransportCredentials(ce))
+	}
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("did not connect: %v", err)
 	}
 
+	http.HandleFunc("/", hchandler)
+	http.HandleFunc("/_ah/health", hchandler)
+
 	sopts := []grpc.ServerOption{grpc.MaxConcurrentStreams(10)}
-	if *insecure == false {
-		sopts = append(sopts, grpc.Creds(ce))
-	}
 	s := grpc.NewServer(sopts...)
 
 	echo.RegisterEchoServerServer(s, &server{})
-	healthpb.RegisterHealthServer(s, &health.Server{})
 
+	healthpb.RegisterHealthServer(s, &healthServer{})
+
+	muxHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isGrpcRequest(r) {
+			s.ServeHTTP(w, r)
+			return
+		}
+		http.DefaultServeMux.ServeHTTP(w, r)
+	})
 	log.Printf("Starting gRPC server on port %v", *grpcport)
 
-	s.Serve(lis)
+
+	if *insecure == false {
+		log.Fatal(http.ListenAndServeTLS(*grpcport, "server_crt.pem", "server_key.pem", h2c.NewHandler(muxHandler, &http2.Server{})))
+	}
+	log.Fatal(http.ListenAndServe(*grpcport, h2c.NewHandler(muxHandler, &http2.Server{})))
 }

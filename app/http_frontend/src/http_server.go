@@ -38,7 +38,7 @@ func backendLBhandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("Failed to generate credentials %v", err)
 	}
 
-	conn, err := grpc.Dial("dns:///be-srv-lb.default.svc.cluster.local", grpc.WithTransportCredentials(ce), grpc.WithBalancerName(roundrobin.Name))
+	conn, err := grpc.Dial("dns:///be-srv-lb.default.svc.cluster.local:50051", grpc.WithTransportCredentials(ce), grpc.WithBalancerName(roundrobin.Name))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -53,7 +53,9 @@ func backendLBhandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Coudl not greet ", http.StatusInternalServerError)
 		}
 		time.Sleep(1 * time.Second)
-		backendList = append(backendList, r.Message)
+		if (r != nil) {
+			backendList = append(backendList, r.Message)
+		}
 	}
 
 	var h, err2 = os.Hostname()

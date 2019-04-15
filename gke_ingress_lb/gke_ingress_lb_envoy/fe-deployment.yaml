@@ -1,0 +1,66 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: fe-deployment
+  labels:
+    app: fe
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: fe
+    spec:
+      containers:
+
+      - name: fe-envoy
+        image: envoyproxy/envoy:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /
+            scheme: HTTPS
+            port: 8080
+        ports:
+        - containerPort: 8080
+          protocol: TCP               
+        command: ["/usr/local/bin/envoy"]
+        args: ["-c", "/data/config/envoy.yaml"]
+        volumeMounts:
+        - name: certs-volume
+          mountPath: /data/certs
+        - name: envoy-config-volume
+          mountPath: /data/config
+                  
+      - name: fe-container
+        image: salrashid123/grpc_backend
+        imagePullPolicy: IfNotPresent         
+        ports:
+        - containerPort: 50051
+          protocol: TCP                 
+        command: ["/grpc_server"]
+        args: ["--grpcport", ":50051", "--insecure"]
+        #readinessProbe:
+        #  exec:
+        #    command: ["/bin/grpc_health_probe", "-addr=:50051", "-service=echo.EchoServer"]
+        #  initialDelaySeconds: 5
+        #livenessProbe:
+        #  exec:
+        #    command: ["/bin/grpc_health_probe", "-addr=:50051", "-service=echo.EchoServer"]
+        #  initialDelaySeconds: 10
+
+      volumes:
+        - name: certs-volume
+          secret:
+            secretName: fe-secret
+        - name: envoy-config-volume
+          configMap:
+             name: envoy-configmap
+             items:
+              - key: config
+                path: envoy.yaml

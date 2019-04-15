@@ -5,23 +5,38 @@ Baseline samle showing gRPC clients connecting via Ingress.
 In this mode one gRPC connection sends 10 rpc messages.  Ingress L7 intercepts the ssl conneciton and then transmits each RPC back to differnet pods.
 Since each RPC goes to differnet endpoints, the load is more evenly distributed between all pods.
 
+As of 4/19, GKE does not support [gRPC HelthChecks](https://github.com/grpc/grpc/blob/master/doc/health-checking.md) and
+instead relies on ordinary HTTP healthchecks which must retrun a `200` (by default against `/` endpoint on the _same_ service
+as the gRPC service).
+ - [GKE Ingress HealthChecks]https://cloud.google.com/kubernetes-engine/docs/concepts/ingress#health_checks)
+
+What this implies is you cannot use the same gRPC listener port within your deployment as-is.  You must implement a mux handler
+that processes both oridnary http2 requests for healthchecks and the gRPC service itself.
+
+For example, `/` endpoint is handled by your application as a healthcheck that can return `200 OK` back to GCE's healtcheck.
+GRPC requests for aservice (eg `/echo.EchoService/SayHello`) must be routeable on the _same_ port.  This requires either a mux capable of
+both HTTP2 and gRPC requests (the latter over http2, ofcourse)
+
+There are two variations/implementations within the `gke_ingress_lb/` folder that demonstrates these workarounds:
+
+* `gke_ingress_lb/gke_ingress_lb_mux`:  golang mux handler where one port `:50051` on the container can process HTTP2 traffic that is
+both non-GRPC and HTTP2 healthchecks for the `/` endpoint.  The mux handler delegates the request to one of the backend handlers based
+on the inbound content-type.
+
+* `gke_ingress_lb/gke_ingress_lb_envoy`:  Envoy service sidecar handles all requests first.  If the inbound request is a healthcheck,
+either return a static `200 OK` or reroute to the backend listener which is again a mux listener capable of handling HTTP2 plain and gRPC.  Essentially,
+this is the same as the mux example in the backend but shows how envoy can also intercept and always respond.
+
+Finally, note that while there utilities such as [grpc-health-probe](https://github.com/grpc-ecosystem/grpc-health-probe), but what that fulfills
+is liveness and readiness checks for the container only; it does not address the HTTP healthcheck requests inbound for GCP  
+
+
 - Image: `salrashid123/grpc_backend`
-  gRPC: port: `:50051`
-  http2: port: `:8081`  (used for LB healthchecks)
+  gRPC and http2 HC port: `:50051`
 
 ## Setup
 
 First setup a static IP:
-
-```
-gcloud compute addresses create gke-ingress --global
-
-gcloud compute addresses list
-NAME         REGION  ADDRESS        STATUS
-gke-ingress          35.241.41.138  RESERVED
-```
-
-the static address `gke-address` is referenced in the GKE ingress file later.
 
 Setup a GKE clsuter
 
@@ -35,67 +50,91 @@ setup a firewall rule to test direct access to the gRPC server via Network LB (j
 gcloud compute firewall-rules create grpc-nlb-firewall --allow tcp:50051
 ```
 
-Deploy
+## Deploy
+
+* `gke_ingress_lb/gke_ingress_lb_mux`:
 
 ```
-kubectl apply -f fe-deployment.yaml -f fe-ingress.yaml -f fe-secret.yaml -f fe-srv-ingress.yaml -f fe-srv-lb.yaml 
+kubectl apply -f fe-deployment.yaml -f fe-ingress.yaml -f fe-secret.yaml -f fe-srv-ingress.yaml -f fe-srv-lb.yaml
 ```
 
 Wait maybe 10 mins for the Ingress object to give an IP and provision the LB (yes, it may take up 10mins)
 
 
+or
+
+* `gke_ingress_lb/gke_ingress_lb_envoy`:
+
+```
+kubectl apply -f envoy-configmap.yaml -f fe-secret.yaml
+```
+
+```
+kubectl apply -f fe-ingress.yaml -f fe-srv-ingress.yaml -f  fe-deployment.yaml -f fe-srv-ingress.yaml -f fe-srv-lb.yaml
+```
+
+## Test
+
 ```
 $ kubectl get no,po,rs,ing,svc
-NAME                                             STATUS    ROLES     AGE       VERSION
-no/gke-cluster-grpc-default-pool-8350b7da-34ss   Ready     <none>    1h        v1.10.5-gke.4
-no/gke-cluster-grpc-default-pool-8350b7da-4n0q   Ready     <none>    1h        v1.10.5-gke.4
-no/gke-cluster-grpc-default-pool-8350b7da-ctbh   Ready     <none>    1h        v1.10.5-gke.4
+NAME                                               STATUS    ROLES     AGE       VERSION
+node/gke-cluster-grpc-default-pool-aeb308a0-89dt   Ready     <none>    9m        v1.11.7-gke.12
+node/gke-cluster-grpc-default-pool-aeb308a0-hv5f   Ready     <none>    9m        v1.11.7-gke.12
+node/gke-cluster-grpc-default-pool-aeb308a0-vsf4   Ready     <none>    9m        v1.11.7-gke.12
 
-NAME                               READY     STATUS    RESTARTS   AGE
-po/fe-deployment-db5bbf479-5pl7q   1/1       Running   0          1m
-po/fe-deployment-db5bbf479-ft899   1/1       Running   0          1m
-po/fe-deployment-db5bbf479-n95wn   1/1       Running   0          1m
-po/fe-deployment-db5bbf479-sjc7q   1/1       Running   0          1m
+NAME                                READY     STATUS    RESTARTS   AGE
+pod/fe-deployment-9ff8b7c84-b6w6s   1/1       Running   0          1m
+pod/fe-deployment-9ff8b7c84-hvfsm   1/1       Running   0          1m
 
-NAME                         DESIRED   CURRENT   READY     AGE
-rs/fe-deployment-db5bbf479   4         4         4         1m
+NAME                                            DESIRED   CURRENT   READY     AGE
+replicaset.extensions/fe-deployment-9ff8b7c84   2         2         2         1m
 
-NAME             HOSTS     ADDRESS         PORTS     AGE
-ing/fe-ingress   *         35.241.41.138   80, 443   1m
+NAME                            HOSTS     ADDRESS          PORTS     AGE
+ingress.extensions/fe-ingress   *         35.227.244.196   80, 443   1m
 
-NAME                 TYPE           CLUSTER-IP      EXTERNAL-IP       PORT(S)                          AGE
-svc/fe-srv-ingress   NodePort       10.23.250.59    <none>            50051:31897/TCP,8081:31051/TCP   1m
-svc/fe-srv-lb        LoadBalancer   10.23.253.156   104.155.151.124   50051:30122/TCP,8081:32144/TCP   1m
-svc/kubernetes       ClusterIP      10.23.240.1     <none>            443/TCP                          1h
+NAME                     TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)           AGE
+service/fe-srv-ingress   NodePort       10.23.249.183   <none>           50051:31655/TCP   1m
+service/fe-srv-lb        LoadBalancer   10.23.246.176   35.226.254.240   50051:30513/TCP   1m
+service/kubernetes       ClusterIP      10.23.240.1     <none>           443/TCP           10m
 ```
 
-Note the Loadbalancer and Ingress IPs assigned.  In the example above, 
+Note the Loadbalancer and Ingress IPs assigned.  In the example above,
 
-- LB: `104.155.151.124`
-- Ingress: `35.241.41.138 `
+- LB: `35.226.254.240`
+- Ingress: `35.227.244.196`
 
 
 Make gRPC calls via the LB:
 
 The response back shows the podname that handled the request.  Note all 10 requests from the client is handled by one pod.  This is imbalanced load.
 ```
-docker run --add-host server.domain.com:104.155.151.124  -t gcr.io/mineral-minutia-820/grpc_backend /grpc_client --host server.domain.com:50051
-2018/09/08 08:18:46 RPC Response: 0 message:"Hello unary RPC msg   from hostname fe-deployment-db5bbf479-ft899" 
-2018/09/08 08:18:47 RPC Response: 1 message:"Hello unary RPC msg   from hostname fe-deployment-db5bbf479-ft899" 
-2018/09/08 08:18:48 RPC Response: 2 message:"Hello unary RPC msg   from hostname fe-deployment-db5bbf479-ft899" 
-2018/09/08 08:18:49 RPC Response: 3 message:"Hello unary RPC msg   from hostname fe-deployment-db5bbf479-ft899" 
+$ docker run --add-host server.domain.com:35.226.254.240 -t salrashid123/grpc_backend /grpc_client --host server.domain.com:50051
+
+2019/04/14 18:16:55 RPC Response: 0 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:16:57 RPC Response: 1 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:16:58 RPC Response: 2 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:16:59 RPC Response: 3 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:17:00 RPC Response: 4 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:17:02 RPC Response: 5 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:17:03 RPC Response: 6 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:17:04 RPC Response: 7 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:17:06 RPC Response: 8 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:17:07 RPC Response: 9 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
 ```
 
 
 Now connect via the ingress L8.  Each response is from a differnt pod (blanced)
 
 ```
-$ docker run --add-host server.domain.com:35.241.41.138   -t gcr.io/mineral-minutia-820/grpc_backend /grpc_client --host server.domain.com:443
-2018/09/08 08:24:33 RPC Response: 0 message:"Hello unary RPC msg   from hostname fe-deployment-db5bbf479-5pl7q" 
-2018/09/08 08:24:34 RPC Response: 1 message:"Hello unary RPC msg   from hostname fe-deployment-db5bbf479-ft899" 
-2018/09/08 08:24:36 RPC Response: 2 message:"Hello unary RPC msg   from hostname fe-deployment-db5bbf479-sjc7q" 
-2018/09/08 08:24:37 RPC Response: 3 message:"Hello unary RPC msg   from hostname fe-deployment-db5bbf479-sjc7q" 
-2018/09/08 08:24:38 RPC Response: 4 message:"Hello unary RPC msg   from hostname fe-deployment-db5bbf479-5pl7q" 
-2018/09/08 08:24:39 RPC Response: 5 message:"Hello unary RPC msg   from hostname fe-deployment-db5bbf479-sjc7q" 
-2018/09/08 08:24:40 RPC Response: 6 message:"Hello unary RPC msg   from hostname fe-deployment-db5bbf479-5pl7q" 
+$ docker run --add-host server.domain.com:35.227.244.196   -t salrashid123/grpc_backend /grpc_client --host server.domain.com:443
+2019/04/14 18:21:58 RPC Response: 0 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:21:59 RPC Response: 1 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-hvfsm"
+2019/04/14 18:22:01 RPC Response: 2 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:22:02 RPC Response: 3 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:22:04 RPC Response: 4 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:22:05 RPC Response: 5 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-hvfsm"
+2019/04/14 18:22:06 RPC Response: 6 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-hvfsm"
+2019/04/14 18:22:07 RPC Response: 7 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-hvfsm"
+2019/04/14 18:22:09 RPC Response: 8 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
+2019/04/14 18:22:10 RPC Response: 9 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
 ```

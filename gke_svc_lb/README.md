@@ -46,28 +46,28 @@ Wait ~5mins till the Network Loadblancer IP is assigned
 
 ```
 $ kubectl get no,po,deployment,svc
-NAME                                             STATUS    ROLES     AGE       VERSION
-no/gke-grpc-cluster-default-pool-fb759232-jz6f   Ready     <none>    1h        v1.10.5-gke.4
-no/gke-grpc-cluster-default-pool-fb759232-mf0v   Ready     <none>    1h        v1.10.5-gke.4
-no/gke-grpc-cluster-default-pool-fb759232-nw2z   Ready     <none>    1h        v1.10.5-gke.4
+NAME                                               STATUS    ROLES     AGE       VERSION
+node/gke-cluster-grpc-default-pool-aeb308a0-89dt   Ready     <none>    1h        v1.11.7-gke.12
+node/gke-cluster-grpc-default-pool-aeb308a0-hv5f   Ready     <none>    1h        v1.11.7-gke.12
+node/gke-cluster-grpc-default-pool-aeb308a0-vsf4   Ready     <none>    1h        v1.11.7-gke.12
 
-NAME                                READY     STATUS    RESTARTS   AGE
-po/be-deployment-6dc58d6898-2bpmh   1/1       Running   0          51s
-po/be-deployment-6dc58d6898-5v2xf   1/1       Running   0          51s
-po/be-deployment-6dc58d6898-jgj27   1/1       Running   0          51s
-po/be-deployment-6dc58d6898-kb4cj   1/1       Running   0          51s
-po/be-deployment-6dc58d6898-krnb5   1/1       Running   0          51s
-po/fe-deployment-75756779d8-fmhtv   1/1       Running   0          51s
+NAME                                 READY     STATUS    RESTARTS   AGE
+pod/be-deployment-757dd4f4bd-cpgl9   1/1       Running   0          10s
+pod/be-deployment-757dd4f4bd-dsxdg   1/1       Running   0          10s
+pod/be-deployment-757dd4f4bd-f8v2v   1/1       Running   0          10s
+pod/be-deployment-757dd4f4bd-msp5f   1/1       Running   0          10s
+pod/be-deployment-757dd4f4bd-qr4sd   1/1       Running   0          10s
+pod/fe-deployment-59d7bb7df8-w4fwc   1/1       Running   0          11s
 
-NAME                   DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
-deploy/be-deployment   5         5         5            5           51s
-deploy/fe-deployment   1         1         1            1           51s
+NAME                                  DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+deployment.extensions/be-deployment   5         5         5            5           10s
+deployment.extensions/fe-deployment   1         1         1            1           11s
 
-NAME             TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)              AGE
-svc/be-srv       ClusterIP      10.19.246.79    <none>           50051/TCP,8081/TCP   51s
-svc/be-srv-lb    ClusterIP      None            <none>           50051/TCP,8081/TCP   51s
-svc/fe-srv       LoadBalancer   10.19.249.102   104.154.194.89   8081:30388/TCP       51s
-svc/kubernetes   ClusterIP      10.19.240.1     <none>           443/TCP              1h
+NAME                 TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)          AGE
+service/be-srv       ClusterIP      10.23.242.113   <none>           50051/TCP        1h
+service/be-srv-lb    ClusterIP      None            <none>           50051/TCP        1h
+service/fe-srv       LoadBalancer   10.23.246.138   35.226.254.240   8081:30014/TCP   1h
+service/kubernetes   ClusterIP      10.23.240.1     <none>           443/TCP          1h
 ```
 
 ### Connect via k8s Service
@@ -78,20 +78,20 @@ svc/kubernetes   ClusterIP      10.19.240.1     <none>           443/TCP        
 ```
 
 ```
-$ curl -sk https://104.154.194.89:8081/backend | jq '.'
+$ curl -sk https://35.226.254.240:8081/backend | jq '.'
 {
-  "frontend": "fe-deployment-75756779d8-fmhtv",
+  "frontend": "fe-deployment-59d7bb7df8-w4fwc",
   "backends": [
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-jgj27",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-jgj27",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-jgj27",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-jgj27",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-jgj27",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-jgj27",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-jgj27",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-jgj27",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-jgj27",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-jgj27"
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-cpgl9",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-cpgl9",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-cpgl9",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-cpgl9",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-cpgl9",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-cpgl9",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-cpgl9",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-cpgl9",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-cpgl9",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-cpgl9"
   ]
 }
 ```
@@ -106,26 +106,27 @@ import (
    "google.golang.org/grpc/credentials"
 )
 
-	conn, err := grpc.Dial("dns:///be-srv-lb.default.svc.cluster.local", grpc.WithTransportCredentials(ce), grpc.WithBalancerName(roundrobin.Name))
+  address := fmt.Sprintf("dns:///be-srv-lb.default.svc.cluster.local:50051")
+	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(ce), grpc.WithBalancerName(roundrobin.Name))
 	c := echo.NewEchoServerClient(conn)
 ```
 
 
 ```
-$ curl -sk https://104.154.194.89:8081/backendlb | jq '.'
+$ curl -sk https://35.226.254.240:8081/backendlb | jq '.'
 {
-  "frontend": "fe-deployment-75756779d8-fmhtv",
+  "frontend": "fe-deployment-59d7bb7df8-w4fwc",
   "backends": [
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-5v2xf",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-5v2xf",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-kb4cj",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-jgj27",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-2bpmh",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-krnb5",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-5v2xf",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-kb4cj",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-jgj27",
-    "Hello unary RPC msg   from hostname be-deployment-6dc58d6898-2bpmh"
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-dsxdg",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-msp5f",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-qr4sd",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-f8v2v",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-cpgl9",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-dsxdg",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-msp5f",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-qr4sd",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-f8v2v",
+    "Hello unary RPC msg   from hostname be-deployment-757dd4f4bd-cpgl9"
   ]
 }
 ```
@@ -135,4 +136,3 @@ Note: responses are distributed evenly.
 ## References
  - [https://github.com/jtattermusch/grpc-loadbalancing-kubernetes-examples#example-1-round-robin-loadbalancing-with-grpcs-built-in-loadbalancing-policy](https://github.com/jtattermusch/grpc-loadbalancing-kubernetes-examples#example-1-round-robin-loadbalancing-with-grpcs-built-in-loadbalancing-policy)
  - [https://kca.id.au/post/k8s_service/](https://kca.id.au/post/k8s_service/)
-

@@ -1,10 +1,7 @@
 package main
 
 import (
-
-	//"os"
-
-	pb "echo"
+	"echo"
 	"flag"
 	"log"
 	"time"
@@ -12,12 +9,12 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
+	//"google.golang.org/grpc/codes"
+	//healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	//"google.golang.org/grpc/status"
 )
 
-const (
-	userinfo_scope = "https://www.googleapis.com/auth/userinfo.email"
-)
+const ()
 
 var (
 	conn *grpc.ClientConn
@@ -44,19 +41,25 @@ func main() {
 	}
 	defer conn.Close()
 
-	c := pb.NewEchoServerClient(conn)
+	c := echo.NewEchoServerClient(conn)
+	ctx := context.Background()
 
-	var testMetadata = metadata.MD{
-		"sal":  []string{"value1"},
-		"key2": []string{"value2"},
-	}
+	/*
+		ctx, cancel := context.WithTimeout(ctx, 1 * time.Second)
+		defer cancel()
+		resp, err := healthpb.NewHealthClient(conn).Check(ctx, &healthpb.HealthCheckRequest{Service: "echo.EchoServer"})
+		if err != nil {
+			log.Fatalf("HealthCheck failed %+v", err)
+		}
 
-	ctx := metadata.NewOutgoingContext(context.Background(), testMetadata)
-
-	var header, trailer metadata.MD
+		if resp.GetStatus() != healthpb.HealthCheckResponse_SERVING {
+			log.Fatalf("service not in serving state: ", resp.GetStatus().String())
+		}
+		log.Printf("RPC HealthChekStatus:%v", resp.GetStatus())
+	*/
 
 	for i := 0; i < 10; i++ {
-		r, err := c.SayHello(ctx, &pb.EchoRequest{Name: "unary RPC msg "}, grpc.Header(&header), grpc.Trailer(&trailer))
+		r, err := c.SayHello(ctx, &echo.EchoRequest{Name: "unary RPC msg "})
 		if err != nil {
 			log.Fatalf("could not greet: %v", err)
 		}
@@ -79,14 +82,13 @@ func main() {
 			if err != nil {
 				log.Fatalf("SayHelloStream(_) = _, %v", err)
 			}
-
 			h, err := stream.Header()
 			if err != nil {
 				log.Fatalf("stream.Header error _, %v", err)
 			}
 			log.Printf("Stream Header: ", h)
 			log.Printf("Message: ", m.Message)
-
 		}
 	*/
+
 }

@@ -16,8 +16,7 @@ Samples for running gRPC on GKE and Istio:
  Javascript clients:  
      
 `client(browser) (via grpc-web protocol) --> Ingress --> (grpc Service on GKE)`
-     
- - Folder: `grpc_web_with_gke/`
+
  - [grpc_web_with_gke](https://github.com/salrashid123/grpc_web_with_gke)
 
 ## gRPC for GKE internal Service->Service

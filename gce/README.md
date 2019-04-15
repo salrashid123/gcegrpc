@@ -16,20 +16,20 @@ Ref
 - First get an external IP address
 
 ```
-gcloud compute addresses create gke-ingress --global
-gcloud compute addresses describe  gke-ingress --global --format="value(address)"
+gcloud compute addresses create gke-lb-ingress --global
+gcloud compute addresses describe  gke-lb-ingress --global --format="value(address)"
 ```
 
 - Use the certificates provided to setup LB SSL
 
 ```
-gcloud compute ssl-certificates create grpcert --certificate=server_crt.pem --private-key=server_key.pem
+gcloud compute ssl-certificates create grplbcert --certificate=server_crt.pem --private-key=server_key.pem
 ```
 
 - Configure the instance template for the Managed Instance Group
 
 ```
-gcloud beta compute instance-templates create-with-container grpctemplate  --machine-type g1-small --tags grpcserver      --container-image="salrashid123/grpc_backend" --container-command="./grpc_server" --container-arg="--grpcport=0.0.0.0:50051"      --container-arg="--httpport=0.0.0.0:8081"
+gcloud beta compute instance-templates create-with-container grpctemplate  --machine-type g1-small --tags grpcserver  \    --container-image="salrashid123/grpc_backend" --no-service-account --no-scopes --container-command="./grpc_server" --container-arg="--grpcport=0.0.0.0:50051"
 ```
 
 - Setup an Initial size for the MIG
@@ -41,7 +41,6 @@ gcloud compute instance-groups managed create web-group-a  --base-instance-name 
 - Setup some firewall rules
 
 ```
-gcloud  compute  firewall-rules create firewall-rules-http2 --allow=tcp:8081 --source-ranges=130.211.0.0/22,35.191.0.0/16  --target-tags=grpcserver
 gcloud  compute  firewall-rules create firewall-rules-grpc --allow=tcp:50051 --source-ranges=130.211.0.0/22,35.191.0.0/16  --target-tags=grpcserver
 ```
 
@@ -57,7 +56,7 @@ gcloud  compute  firewall-rules create firewall-rules-allow-test-grpc --allow=tc
 ```
 gcloud compute instance-groups managed set-named-ports web-group-a --named-ports=grpc-port:50051 --zone us-central1-a
 
-gcloud beta compute health-checks create  http2  webpool-basic-check --port=8081 --request-path="/_ah/health"
+gcloud beta compute health-checks create  http2  webpool-basic-check --port=50051 --request-path="/"
 
 gcloud beta compute backend-services create webpool-map-backend-service --port-name=grpc-port  --protocol=http2 --health-checks=webpool-basic-check --global
 
@@ -65,13 +64,13 @@ gcloud beta compute backend-services add-backend webpool-map-backend-service  --
 
 gcloud compute url-maps create webpool-map --default-service webpool-map-backend-service
 
-gcloud alpha compute target-https-proxies create https-lb-proxy  --url-map=webpool-map  --ssl-certificates=grpcert --global
+gcloud alpha compute target-https-proxies create https-lb-proxy  --url-map=webpool-map  --ssl-certificates=grplbcert --global
 ```
 
 - Final steps
 
 ```
-gcloud compute forwarding-rules create https-content-rule --address `gcloud compute addresses describe  gke-ingress --global --format="value(address)"`  --global --target-https-proxy https-lb-proxy --ports 443
+gcloud compute forwarding-rules create https-content-rule --address `gcloud compute addresses describe  gke-lb-ingress --global --format="value(address)"`  --global --target-https-proxy https-lb-proxy --ports 443
 ```
 
 >> now wait upto 10mins for the LB to provisoin
@@ -84,6 +83,7 @@ Test the gRPC server by directly accessing each VM with its public IP
 
 ```
 gcloud compute instances list --filter="tags.items=grpcserver"
+
 docker run --add-host server.domain.com:<VM_PUBLIC_IP>  -t salrashid123/grpc_backend /grpc_client --host server.domain.com:50051
 ```
 
@@ -128,7 +128,9 @@ $ docker run --add-host server.domain.com:35.232.128.12  -t salrashid123/grpc_ba
 Test the gRPC server via LB:
 
 ```
-export LB_IP=`gcloud compute addresses describe  gke-ingress --global --format="value(address)"`
+export LB_IP=`gcloud compute addresses describe  gke-lb-ingress --global --format="value(address)"`
+echo $LB_IP
+
 docker run --add-host server.domain.com:$LB_IP  -t salrashid123/grpc_backend /grpc_client --host server.domain.com:443
 ```
 
@@ -161,11 +163,12 @@ gcloud compute url-maps delete  webpool-map -q
 gcloud compute backend-services  remove-backend webpool-map-backend-service --instance-group=web-group-a --global --instance-group-zone us-central1-a -q
 gcloud compute backend-services delete webpool-map-backend-service --global -q
 gcloud beta compute health-checks delete  webpool-basic-check -q
-gcloud compute  firewall-rules delete firewall-rules-http2 -q
 gcloud compute  firewall-rules delete firewall-rules-grpc -q
 gcloud compute  firewall-rules delete firewall-rules-allow-test-grpc -q
 gcloud compute instance-groups managed delete web-group-a --zone us-central1-a -q
 gcloud compute instance-templates delete grpctemplate -q
+gcloud compute ssl-certificates delete grplbcert -q
+gcloud compute addresses delete gke-lb-ingress --global -q 
 ```
 
 

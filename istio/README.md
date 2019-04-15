@@ -14,12 +14,17 @@ Demonstrates gRPC loadbalancing with Istio where mesh-external clients connect v
 
 1) Install GKE+Istio
 
+Note, in the following i'm installing GKE first and than a manual install of istio.  
+
+You can also simply use
+``` --addons HorizontalPodAutoscaling,HttpLoadBalancing,Istio --istio-config auth=MTLS_PERMISSIVE``` as the istio addon for GKE and then add
+yaml configs for the ILBGateway
+
 
 ```bash
 
-gcloud container  clusters create cluster-1 --machine-type "n1-standard-2" \
-   --zone us-central1-a  --num-nodes 4 --enable-ip-alias
-
+gcloud container  clusters create cluster-1 --machine-type "n1-standard-4" \
+   --zone us-central1-a  --num-nodes 4 --enable-ip-alias 
 gcloud container clusters get-credentials cluster-1 --zone us-central1-a
 
 kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=$(gcloud config get-value core/account)
@@ -43,7 +48,6 @@ helm init --client-only
 
 helm template istio-$ISTIO_VERSION/install/kubernetes/helm/istio --name istio --namespace istio-system \
    --set prometheus.enabled=true \
-   --set servicegraph.enabled=true \
    --set grafana.enabled=true \
    --set tracing.enabled=true \
    --set sidecarInjectorWebhook.enabled=true \
@@ -77,6 +81,8 @@ Source code for the sample application is in the `apps/` folder for this repo.
 The grpc application creates one gRPC Channel to the server and on that one connection, sends 10 RPC requests.
 
 ```
+kubectl apply -f fe-certs.yaml
+
 kubectl apply -f all-istio.yaml 
 
 kubectl apply -f istio-fe.yaml \

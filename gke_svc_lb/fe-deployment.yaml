@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
       - name: fe-container
-        image: gcr.io/mineral-minutia-820/http_frontend
+        image: salrashid123/http_frontend
         imagePullPolicy: Always
         livenessProbe:
           httpGet:

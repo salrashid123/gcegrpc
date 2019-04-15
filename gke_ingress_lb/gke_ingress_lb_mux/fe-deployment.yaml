@@ -1,0 +1,40 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: fe-deployment
+  labels:
+    app: fe
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: fe
+    spec:
+      containers:
+      - name: fe-container
+        image: salrashid123/grpc_backend
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 50051
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /
+            scheme: HTTPS
+            port: 50051
+        #readinessProbe:
+        #  exec:
+        #    command: ["/bin/grpc_health_probe", "-addr=:50051", "-service=echo.EchoServer"]
+        #  initialDelaySeconds: 5
+        #livenessProbe:
+        #  exec:
+        #    command: ["/bin/grpc_health_probe", "-addr=:50051", "-service=echo.EchoServer"]
+        #  initialDelaySeconds: 10                   
+        ports:
+        - containerPort: 50051
+          protocol: TCP                
+        command: ["/grpc_server"]
+        args: ["--grpcport", ":50051"]

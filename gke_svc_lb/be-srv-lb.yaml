@@ -11,10 +11,6 @@ spec:
   - name: grpclb
     port: 50051
     protocol: TCP
-    targetPort: 50051
-  - name: be-web
-    port: 8081
-    protocol: TCP
-    targetPort: 8081          
+    targetPort: 50051         
   selector:
     app: be
