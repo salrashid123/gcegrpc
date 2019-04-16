@@ -10,7 +10,7 @@ instead relies on ordinary HTTP healthchecks which must retrun a `200` (by defau
 as the gRPC service).
  - [GKE Ingress HealthChecks]https://cloud.google.com/kubernetes-engine/docs/concepts/ingress#health_checks)
 
-What this implies is you cannot use the same gRPC listener port within your deployment as-is.  You must implement a mux handler
+What this implies is you cannot use the same gRPC listener port within your deployment as-is.  You must implement a mux handler or proxy
 that processes both oridnary http2 requests for healthchecks and the gRPC service itself.
 
 For example, `/` endpoint is handled by your application as a healthcheck that can return `200 OK` back to GCE's healtcheck.
@@ -19,13 +19,15 @@ both HTTP2 and gRPC requests (the latter over http2, ofcourse)
 
 There are two variations/implementations within the `gke_ingress_lb/` folder that demonstrates these workarounds:
 
+* 
+
 * `gke_ingress_lb/gke_ingress_lb_mux`:  golang mux handler where one port `:50051` on the container can process HTTP2 traffic that is
 both non-GRPC and HTTP2 healthchecks for the `/` endpoint.  The mux handler delegates the request to one of the backend handlers based
 on the inbound content-type.
 
 * `gke_ingress_lb/gke_ingress_lb_envoy`:  Envoy service sidecar handles all requests first.  If the inbound request is a healthcheck,
-either return a static `200 OK` or reroute to the backend listener which is again a mux listener capable of handling HTTP2 plain and gRPC.  Essentially,
-this is the same as the mux example in the backend but shows how envoy can also intercept and always respond.
+either return a static `200 OK` or reroute to the backend listener capable of handling gRPC.  Essentially,
+this is the same moves the logic for the healthcheck upto envoy.
 
 Finally, note that while there utilities such as [grpc-health-probe](https://github.com/grpc-ecosystem/grpc-health-probe), but what that fulfills
 is liveness and readiness checks for the container only; it does not address the HTTP healthcheck requests inbound for GCP  
@@ -41,7 +43,7 @@ First setup a static IP:
 Setup a GKE clsuter
 
 ```
-gcloud container  clusters create cluster-grpc --zone us-central1-a  --num-nodes 3
+gcloud container  clusters create cluster-grpc --zone us-central1-a  --num-nodes 3 --enable-ip-alias
 ```
 
 setup a firewall rule to test direct access to the gRPC server via Network LB (just to show the diffence)
@@ -71,6 +73,52 @@ kubectl apply -f envoy-configmap.yaml -f fe-secret.yaml
 
 ```
 kubectl apply -f fe-ingress.yaml -f fe-srv-ingress.yaml -f  fe-deployment.yaml -f fe-srv-ingress.yaml -f fe-srv-lb.yaml
+```
+
+Note, the envoy config that allows for upstream healthchecks for gRPC is based on a simple LUA filter that queries the local admin instance.
+
+```yaml
+          http_filters:
+          - name: envoy.lua
+            config:
+              inline_code: |
+                package.path = "/etc/envoy/lua/?.lua;/usr/share/lua/5.1/nginx/?.lua;/etc/envoy/lua/" .. package.path
+
+                function envoy_on_request(request_handle)
+                
+                  if request_handle:headers():get(":path") == "/" then
+
+                    local headers, body = request_handle:httpCall(
+                    "local_admin",
+                    {
+                      [":method"] = "GET",
+                      [":path"] = "/clusters",
+                      [":authority"] = "local_admin"
+                    },"", 50)
+                    
+                    request_handle:logWarn(body)                    
+                    str = "local_grpc_endpoint::127.0.0.1:50051::health_flags::healthy"
+                    if string.match(body, str) then
+                       request_handle:respond({[":status"] = "200"},"ok")
+                    else
+                       request_handle:respond({[":status"] = "503"},"unavailable")
+                    end
+
+                  end
+
+                end     
+                
+  clusters:
+
+  - name: local_admin
+    connect_timeout: 0.05s
+    type:  STATIC
+    lb_policy: ROUND_ROBIN
+    hosts:
+    - socket_address:
+        address: 127.0.0.1
+        port_value: 9000                
+
 ```
 
 ## Test

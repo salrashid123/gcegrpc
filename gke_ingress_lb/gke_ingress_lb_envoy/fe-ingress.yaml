@@ -9,6 +9,11 @@ spec:
   - hosts:
     - server.domain.com
     secretName: fe-secret
-  backend:
-    serviceName: fe-srv-ingress
-    servicePort: 8080
+  rules:
+  - host: server.domain.com  
+    http:
+      paths:
+      - path: /echo.EchoServer/*
+        backend:
+          serviceName: fe-srv-ingress
+          servicePort: 8080

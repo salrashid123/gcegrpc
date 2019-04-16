@@ -37,21 +37,47 @@ data:
                   routes:
                   - match:
                       path: "/echo.EchoServer/SayHello"
-                    route: { cluster: local_grpc_endpoint  }              
-                  - match:
-                      path: "/"
-                    route: { cluster: local_grpc_endpoint, prefix_rewrite: "/" }
-                    #direct_response:
-                    #  status: 200                
+                    route: { cluster: local_grpc_endpoint  }
               http_filters:
+              - name: envoy.lua
+                config:
+                  inline_code: |
+                    package.path = "/etc/envoy/lua/?.lua;/usr/share/lua/5.1/nginx/?.lua;/etc/envoy/lua/" .. package.path
+
+                    function envoy_on_request(request_handle)
+                    
+                      if request_handle:headers():get(":path") == "/" then
+
+                        local headers, body = request_handle:httpCall(
+                        "local_admin",
+                        {
+                          [":method"] = "GET",
+                          [":path"] = "/clusters",
+                          [":authority"] = "local_admin"
+                        },"", 50)
+                        
+                                        
+                        str = "local_grpc_endpoint::127.0.0.1:50051::health_flags::healthy"
+                        if string.match(body, str) then
+                          request_handle:respond({[":status"] = "200"},"ok")
+                        else
+                          request_handle:logWarn("Envoy healthcheck failed")     
+                          request_handle:respond({[":status"] = "503"},"unavailable")
+                        end
+
+                      end
+
+                    end              
+
               - name: envoy.router
+                typed_config: {}
           tls_context:
             common_tls_context:
               tls_certificates:
                 - certificate_chain:
                     filename: "/data/certs/tls.crt"
                   private_key:
-                    filename: "/data/certs/tls.key"          
+                    filename: "/data/certs/tls.key"
 
       clusters:
       - name: local_grpc_endpoint
@@ -76,3 +102,12 @@ data:
         - socket_address:
             address: 127.0.0.1
             port_value: 50051
+
+      - name: local_admin
+        connect_timeout: 0.05s
+        type:  STATIC
+        lb_policy: ROUND_ROBIN
+        hosts:
+        - socket_address:
+            address: 127.0.0.1
+            port_value: 9000

@@ -38,8 +38,8 @@ spec:
           mountPath: /data/config
                   
       - name: fe-container
-        image: salrashid123/grpc_backend
-        imagePullPolicy: IfNotPresent         
+        image: salrashid123/grpc_only_backend
+        imagePullPolicy: Always         
         ports:
         - containerPort: 50051
           protocol: TCP                 

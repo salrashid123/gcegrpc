@@ -32,7 +32,7 @@ What the image under
 
 ### Create a cluster
 ```
-gcloud container  clusters create cluster-grpc --zone us-central1-a  --num-nodes 4
+gcloud container  clusters create cluster-grpc --zone us-central1-a  --num-nodes 4 --enable-ip-alias
 ```
 
 ### Deploy
