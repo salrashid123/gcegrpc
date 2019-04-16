@@ -36,7 +36,7 @@ FROM gcr.io/distroless/base
 COPY --from=build /go/server_crt.pem /
 COPY --from=build /go/server_key.pem /
 COPY --from=build /go/CA_crt.pem /
-#COPY --from=build /go/bin /
+COPY --from=build /go/bin /
 
 EXPOSE 50051
 
