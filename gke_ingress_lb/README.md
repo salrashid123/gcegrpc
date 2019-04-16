@@ -26,14 +26,18 @@ both non-GRPC and HTTP2 healthchecks for the `/` endpoint.  The mux handler dele
 on the inbound content-type.
 
 * `gke_ingress_lb/gke_ingress_lb_envoy`:  Envoy service sidecar handles all requests first.  If the inbound request is a healthcheck,
-either return a static `200 OK` or reroute to the backend listener capable of handling gRPC.  Essentially,
-this is the same moves the logic for the healthcheck upto envoy.
+the proxy executes a LUA script that checks the upsteream health status (i.,e envoy's own healthcheck status for the upstream service).
+If envoy sees the upstream service is healthy, the LUA script returns a  `200 OK`.  If the rquest is for a non healthcheck request (i.,e an actual
+grpc request), it reroute to the backend listener capable of handling gRPC.  Note, the upstream healthcheck envoy runs is an implementation of
+grpc Healthchecks.
 
 Finally, note that while there utilities such as [grpc-health-probe](https://github.com/grpc-ecosystem/grpc-health-probe), but what that fulfills
 is liveness and readiness checks for the container only; it does not address the HTTP healthcheck requests inbound for GCP  
 
 
-- Image: `salrashid123/grpc_backend`
+- Image: 
+* `salrashid123/grpc_backend`: gRPC client/server application with http2 mux
+* `salrashid123/grpc_only_backend`: gRPC client/server application without http2 mux
   gRPC and http2 HC port: `:50051`
 
 ## Setup
