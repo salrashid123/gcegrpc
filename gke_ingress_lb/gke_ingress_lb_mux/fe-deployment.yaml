@@ -17,12 +17,12 @@ spec:
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
-            path: /
+            path: /_ah/health
             port: 50051
             scheme: HTTPS
         readinessProbe:
           httpGet:
-            path: /
+            path: /_ah/health
             scheme: HTTPS
             port: 50051
         #readinessProbe:
