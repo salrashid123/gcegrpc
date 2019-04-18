@@ -46,7 +46,7 @@ data:
 
                     function envoy_on_request(request_handle)
                     
-                      if request_handle:headers():get(":path") == "/" then
+                      if request_handle:headers():get(":path") == "/_ah/health" then
 
                         local headers, body = request_handle:httpCall(
                         "local_admin",

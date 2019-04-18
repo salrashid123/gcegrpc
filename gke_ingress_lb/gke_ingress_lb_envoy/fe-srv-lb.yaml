@@ -6,7 +6,8 @@ metadata:
   labels:
     type: fe-srv
   annotations:
-      service.alpha.kubernetes.io/app-protocols: '{"fe":"HTTP2"}'    
+    service.alpha.kubernetes.io/app-protocols: '{"fe":"HTTP2"}'
+    cloud.google.com/neg: '{"ingress": true}'
 spec:
   type: LoadBalancer  
   ports:

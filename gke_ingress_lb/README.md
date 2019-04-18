@@ -42,7 +42,6 @@ is liveness and readiness checks for the container only; it does not address the
 
 ## Setup
 
-First setup a static IP:
 
 Setup a GKE clsuter
 
@@ -79,7 +78,7 @@ kubectl apply -f envoy-configmap.yaml -f fe-secret.yaml
 kubectl apply -f fe-ingress.yaml -f fe-srv-ingress.yaml -f  fe-deployment.yaml -f fe-srv-ingress.yaml -f fe-srv-lb.yaml
 ```
 
-Note, the envoy config that allows for upstream healthchecks for gRPC is based on a simple LUA filter that queries the local admin instance.
+Note, the envoy config that allows for upstream custom healthchecks (`/_ah/health`) for gRPC is based on a simple LUA filter that queries the local admin instance.
 
 ```yaml
           http_filters:
@@ -90,7 +89,7 @@ Note, the envoy config that allows for upstream healthchecks for gRPC is based o
 
                 function envoy_on_request(request_handle)
                 
-                  if request_handle:headers():get(":path") == "/" then
+                  if request_handle:headers():get(":path") == "/_ah/health" then
 
                     local headers, body = request_handle:httpCall(
                     "local_admin",
@@ -123,6 +122,25 @@ Note, the envoy config that allows for upstream healthchecks for gRPC is based o
         address: 127.0.0.1
         port_value: 9000                
 
+```
+
+The healthcheck endpoint handled by envoy corresponds to the custom healthcheck in the Deployment (`fe-deployment.yaml`):
+
+```yaml
+        livenessProbe:
+          httpGet:
+            path: /_ah/health
+            scheme: HTTPS
+            port: fe
+        readinessProbe:
+          httpGet:
+            path: /_ah/health
+            scheme: HTTPS
+            port: fe
+        ports:
+        - name: fe
+          containerPort: 8080
+          protocol: TCP
 ```
 
 ## Test

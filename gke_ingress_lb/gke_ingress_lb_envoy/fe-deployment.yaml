@@ -18,16 +18,17 @@ spec:
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
-            path: /
-            port: 8080
+            path: /_ah/health
             scheme: HTTPS
+            port: fe
         readinessProbe:
           httpGet:
-            path: /
+            path: /_ah/health
             scheme: HTTPS
-            port: 8080
+            port: fe
         ports:
-        - containerPort: 8080
+        - name: fe
+          containerPort: 8080
           protocol: TCP               
         command: ["/usr/local/bin/envoy"]
         args: ["-c", "/data/config/envoy.yaml"]
