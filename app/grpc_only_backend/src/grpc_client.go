@@ -1,8 +1,11 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"echo"
 	"flag"
+	"io/ioutil"
 	"log"
 	"time"
 
@@ -24,16 +27,28 @@ func main() {
 
 	address := flag.String("host", "localhost:50051", "host:port of gRPC server")
 	insecure := flag.Bool("insecure", false, "connect without TLS")
+	cacert := flag.String("cacert", "CA_crt.pem", "CACert for server")
+	serverName := flag.String("servername", "grpc.domain.com", "CACert for server")
 	flag.Parse()
 
-	ce, err := credentials.NewClientTLSFromFile("server_crt.pem", "")
-	if err != nil {
-		log.Fatalf("Failed to generate credentials %v", err)
-	}
-
+	var err error
 	if *insecure == true {
 		conn, err = grpc.Dial(*address, grpc.WithInsecure())
 	} else {
+
+		var tlsCfg tls.Config
+		rootCAs := x509.NewCertPool()
+		pem, err := ioutil.ReadFile(*cacert)
+		if err != nil {
+			log.Fatalf("failed to load root CA certificates  error=%v", err)
+		}
+		if !rootCAs.AppendCertsFromPEM(pem) {
+			log.Fatalf("no root CA certs parsed from file ")
+		}
+		tlsCfg.RootCAs = rootCAs
+		tlsCfg.ServerName = *serverName
+
+		ce := credentials.NewTLS(&tlsCfg)
 		conn, err = grpc.Dial(*address, grpc.WithTransportCredentials(ce))
 	}
 	if err != nil {
