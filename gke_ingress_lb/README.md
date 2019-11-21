@@ -208,3 +208,18 @@ $ docker run --add-host server.domain.com:35.227.244.196   -t salrashid123/grpc_
 2019/04/14 18:22:09 RPC Response: 8 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
 2019/04/14 18:22:10 RPC Response: 9 message:"Hello unary RPC msg   from hostname fe-deployment-9ff8b7c84-b6w6s"
 ```
+
+
+
+## Internal L7 ILB
+
+kubectl apply -f fe-ilb-ingress.yaml 
+
+gcloud beta compute networks subnets create l7ilb-subnet-us-central1 \
+--purpose INTERNAL_HTTPS_LOAD_BALANCER \
+--role ACTIVE \
+--region us-central1 \
+--network default \
+--range 10.126.0.0/22
+
+
