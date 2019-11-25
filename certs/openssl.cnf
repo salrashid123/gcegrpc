@@ -117,6 +117,7 @@ DNS.4 = be-srv-lb
 DNS.5 = be-srv-lb.default.svc.cluster.local
 DNS.6 = grpc.domain.com
 DNS.7 = grpcweb.domain.com
+DNS.8 = localhost
 
 [ v3_req ]
 basicConstraints = CA:false
