@@ -29,8 +29,8 @@ DNS.4 = localhost
 - Generate the server certificates
 ```
 openssl genrsa -out server_key.pem 2048
-openssl req -config openssl.cnf -days 400 -out server_csr.pem -key server_key.pem -new -sha256  -extensions v3_req  -subj "/C=US/ST=California/L=Mountain View/O=Google/OU=Enterprise/CN=server.domain.com"
-openssl ca -config openssl.cnf -days 400 -notext  -in server_csr.pem   -out server_crt.pem
+openssl req -config openssl.cnf  -out server_csr.pem -key server_key.pem -new -sha256  -extensions v3_req  -subj "/C=US/ST=California/L=Mountain View/O=Google/OU=Enterprise/CN=server.domain.com"
+openssl ca -config openssl.cnf  -notext  -in server_csr.pem   -out server_crt.pem
 ```
 
 - Copy the `.pem` files to each folder (`frontend/`, `backend_grpc/`, `backend_envoy`).

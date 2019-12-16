@@ -13,18 +13,8 @@ spec:
     spec:
       containers:
       - name: be-container
-        image: salrashid123/grpc_backend
-        imagePullPolicy: Always
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 50051
-            scheme: HTTPS
-        readinessProbe:
-          httpGet:
-            path: /
-            scheme: HTTPS
-            port: 50051           
+        image: salrashid123/grpc_only_backend
+        imagePullPolicy: Always         
         ports:
         - containerPort: 50051
           protocol: TCP                 

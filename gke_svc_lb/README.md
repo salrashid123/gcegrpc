@@ -41,6 +41,11 @@ gcloud container  clusters create cluster-grpc --zone us-central1-a  --num-nodes
 kubectl apply -f be-deployment.yaml  -f be-srv-lb.yaml  -f be-srv.yaml  -f fe-deployment.yaml  -f fe-srv.yaml
 ```
 
+Create firewall rule
+
+```
+gcloud compute firewall-rules create allow-grpc-nlb --action=ALLOW --rules=tcp:8081 --source-ranges=0.0.0.0/0
+```
 
 Wait ~5mins till the Network Loadblancer IP is assigned
 

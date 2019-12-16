@@ -40,7 +40,7 @@ spec:
                   
       - name: fe-container
         image: salrashid123/grpc_only_backend
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 50051
           protocol: TCP                 

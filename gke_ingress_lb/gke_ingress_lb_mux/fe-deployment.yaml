@@ -14,7 +14,7 @@ spec:
       containers:
       - name: fe-container
         image: salrashid123/grpc_backend
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         livenessProbe:
           httpGet:
             path: /_ah/health

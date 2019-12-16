@@ -213,6 +213,7 @@ $ docker run --add-host server.domain.com:35.227.244.196   -t salrashid123/grpc_
 
 ## Internal L7 ILB
 
+```
 kubectl apply -f fe-ilb-ingress.yaml 
 
 gcloud beta compute networks subnets create l7ilb-subnet-us-central1 \
@@ -221,5 +222,5 @@ gcloud beta compute networks subnets create l7ilb-subnet-us-central1 \
 --region us-central1 \
 --network default \
 --range 10.126.0.0/22
-
+```
 

@@ -10,6 +10,10 @@ import (
 	"os"
 	"time"
 
+	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
+
 	"google.golang.org/grpc/balancer/roundrobin"
 	"google.golang.org/grpc/credentials"
 
@@ -33,10 +37,19 @@ func backendLBhandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 
-	ce, err := credentials.NewClientTLSFromFile("server_crt.pem", "")
+	var tlsCfg tls.Config
+	rootCAs := x509.NewCertPool()
+	pem, err := ioutil.ReadFile("CA_crt.pem")
 	if err != nil {
-		log.Fatalf("Failed to generate credentials %v", err)
+		log.Fatalf("failed to load root CA certificates  error=%v", err)
 	}
+	if !rootCAs.AppendCertsFromPEM(pem) {
+		log.Fatalf("no root CA certs parsed from file ")
+	}
+	tlsCfg.RootCAs = rootCAs
+	tlsCfg.ServerName = "be-srv.default.svc.cluster.local"
+
+	ce := credentials.NewTLS(&tlsCfg)
 
 	conn, err := grpc.Dial("dns:///be-srv-lb.default.svc.cluster.local:50051", grpc.WithTransportCredentials(ce), grpc.WithBalancerName(roundrobin.Name))
 	if err != nil {
@@ -79,10 +92,20 @@ func backendhandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 
-	ce, err := credentials.NewClientTLSFromFile("server_crt.pem", "")
+
+	var tlsCfg tls.Config
+	rootCAs := x509.NewCertPool()
+	pem, err := ioutil.ReadFile("CA_crt.pem")
 	if err != nil {
-		log.Fatalf("Failed to generate credentials %v", err)
+		log.Fatalf("failed to load root CA certificates  error=%v", err)
 	}
+	if !rootCAs.AppendCertsFromPEM(pem) {
+		log.Fatalf("no root CA certs parsed from file ")
+	}
+	tlsCfg.RootCAs = rootCAs
+	tlsCfg.ServerName = "be-srv.default.svc.cluster.local"
+
+	ce := credentials.NewTLS(&tlsCfg)
 
 	address := fmt.Sprintf("be-srv.default.svc.cluster.local:50051")
 	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(ce))
@@ -96,9 +119,10 @@ func backendhandler(w http.ResponseWriter, r *http.Request) {
 		r, err := c.SayHello(ctx, &echo.EchoRequest{Name: "unary RPC msg "})
 		if err != nil {
 			http.Error(w, "Coudl not greet ", http.StatusInternalServerError)
+		} else {
+			backendList = append(backendList, r.Message)
 		}
 		time.Sleep(1 * time.Second)
-		backendList = append(backendList, r.Message)
 	}
 
 	var h, err2 = os.Hostname()

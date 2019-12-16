@@ -31,7 +31,7 @@ kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-ad
 
 kubectl create ns istio-system
 
-export ISTIO_VERSION=1.0.5
+export ISTIO_VERSION=1.3.2
 wget https://github.com/istio/istio/releases/download/$ISTIO_VERSION/istio-$ISTIO_VERSION-linux.tar.gz
 tar xvzf istio-$ISTIO_VERSION-linux.tar.gz
 
@@ -40,19 +40,16 @@ tar xf helm-v2.11.0-linux-amd64.tar.gz
 
 export PATH=`pwd`/istio-$ISTIO_VERSION/bin:`pwd`/linux-amd64/:$PATH
 
-kubectl apply -f istio-$ISTIO_VERSION/install/kubernetes/helm/istio/templates/crds.yaml
-kubectl apply -f istio-$ISTIO_VERSION/install/kubernetes/helm/istio/charts/certmanager/templates/crds.yaml
+helm template istio-$ISTIO_VERSION/install/kubernetes/helm/istio-init --name istio-init --namespace istio-system | kubectl apply -f -
 
 
-helm init --client-only
-
-helm template istio-$ISTIO_VERSION/install/kubernetes/helm/istio --name istio --namespace istio-system \
+helm template istio-$ISTIO_VERSION/install/kubernetes/helm/istio --name istio --namespace istio-system  \
    --set prometheus.enabled=true \
    --set grafana.enabled=true \
    --set tracing.enabled=true \
    --set sidecarInjectorWebhook.enabled=true \
    --set gateways.istio-ilbgateway.enabled=true \
-   --set global.mtls.enabled=true  > istio.yaml
+   --set global.mtls.enabled=true > istio.yaml
 
 kubectl apply -f istio.yaml
 
@@ -72,6 +69,10 @@ kubectl get svc istio-ilbgateway  -n istio-system
 export ILB_GATEWAY_IP=$(kubectl -n istio-system get service istio-ilbgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 echo $ILB_GATEWAY_IP
 
+```
+
+```
+$ kubectl get no,po,rc,svc,ing,deployment -n istio-system
 ```
 
 3) Deploy sample application

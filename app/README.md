@@ -3,7 +3,7 @@
 
 * `salrashid123/grpc_backend`: gRPC client/server application with http2 mux
 * `salrashid123/grpc_only_backend`: gRPC client/server application without http2 mux
-* `salrashid123/http_frontnd`: http frontend webapp use by the GKE Interal LB sample (`gke_svc_lb`)
+* `salrashid123/http_frontend`: http frontend webapp use by the GKE Interal LB sample (`gke_svc_lb`)
 
 # Setup
 
