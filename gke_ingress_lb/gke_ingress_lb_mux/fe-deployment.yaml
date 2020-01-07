@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: fe-deployment
@@ -6,6 +6,9 @@ metadata:
     app: fe
 spec:
   replicas: 2
+  selector:
+    matchLabels:
+      app: fe      
   template:
     metadata:
       labels:
