@@ -6,9 +6,9 @@ metadata:
     app: fe
 spec:
   replicas: 2
-  selector:
-    matchLabels:
-      app: fe     
+  selector:
+    matchLabels:
+      app: fe   
   template:
     metadata:
       labels:
