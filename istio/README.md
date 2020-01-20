@@ -10,7 +10,7 @@ Demonstrates gRPC loadbalancing with Istio where mesh-external clients connect v
 - `client_grpc_app (external) --> (GCP ExternalLB) --> Istio --> Service`
 
 
-- uses ISTIO version `1.0.5`
+- uses ISTIO version `1.3.2`
 
 1) Install GKE+Istio
 
@@ -24,7 +24,7 @@ yaml configs for the ILBGateway
 ```bash
 
 gcloud container  clusters create cluster-1 --machine-type "n1-standard-4" \
-   --zone us-central1-a  --num-nodes 4 --enable-ip-alias 
+   --zone us-central1-a  --num-nodes 4 --cluster-version=1.16.0 --enable-ip-alias 
 gcloud container clusters get-credentials cluster-1 --zone us-central1-a
 
 kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=$(gcloud config get-value core/account)

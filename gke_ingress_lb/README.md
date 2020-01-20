@@ -213,4 +213,3 @@ $ docker run --add-host server.domain.com:35.227.244.196   -t salrashid123/grpc_
 
 ## Internal L7 ILB
 
-

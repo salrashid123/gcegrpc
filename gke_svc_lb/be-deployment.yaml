@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: be-deployment
@@ -6,6 +6,9 @@ metadata:
     app: be
 spec:
   replicas: 5
+  selector:
+    matchLabels:
+      app: be  
   template:
     metadata:
       labels:
