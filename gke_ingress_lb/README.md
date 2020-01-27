@@ -213,3 +213,99 @@ $ docker run --add-host server.domain.com:35.227.244.196   -t salrashid123/grpc_
 
 ## Internal L7 ILB
 
+### Create cluster and subnet for ILB:
+
+
+* 26/1/20: L7GKE ILB only on `rapid` channel
+
+```bash
+
+gcloud beta compute networks subnets create l7ilb-subnet-us-central1 \
+--purpose INTERNAL_HTTPS_LOAD_BALANCER \
+--role ACTIVE \
+--region us-central1 \
+--network default \
+--range 10.126.0.0/22
+
+gcloud beta container clusters create cluster-grpc   --release-channel=rapid   --enable-ip-alias   --zone=us-central1-a
+
+gcloud beta container clusters describe cluster-grpc  \
+  --zone=us-central1-a \
+  --format="flattened(releaseChannel.channel,currentNodeVersion,ipAllocationPolicy.useIpAliases)"
+```
+
+```
+cd gke_ingress_lb_mux
+
+kubectl apply -f .
+```
+( specifically see `fe-ilb-ingress.yaml`)
+
+### Create VM to test internal connectivity
+
+```bash
+gcloud compute instances create l7-ilb-client-us-central1-a \
+    --image-family=debian-9 \
+    --image-project=debian-cloud \
+    --network=default \
+    --subnet=default \
+    --zone=us-central1-a \
+    --tags=allow-ssh
+
+gcloud compute ssh l7-ilb-client-us-central1-a --zone=us-central1-a
+```
+
+([install docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-debian-9))
+
+### Test ILB
+
+```
+$ kubectl get po,svc,ing
+NAME                                READY   STATUS    RESTARTS   AGE
+pod/fe-deployment-cff4c8475-8xhs5   1/1     Running   0          11m
+pod/fe-deployment-cff4c8475-9xjk2   1/1     Running   0          11m
+
+NAME                     TYPE           CLUSTER-IP   EXTERNAL-IP     PORT(S)           AGE
+service/fe-srv-ingress   NodePort       10.0.6.205   <none>          50051:30486/TCP   13m
+service/fe-srv-lb        LoadBalancer   10.0.3.128   34.69.126.184   50051:31940/TCP   13m
+service/kubernetes       ClusterIP      10.0.0.1     <none>          443/TCP           24m
+
+NAME                                HOSTS   ADDRESS         PORTS     AGE
+ingress.extensions/fe-ilb-ingress   *       10.128.15.240   80, 443   13m
+ingress.extensions/fe-ingress       *       34.102.192.4    80, 443   13m
+```
+
+Following shows responses on one grpc connection and 10rpc (each rpc response from different pods)
+
+ External:
+
+```
+docker run --add-host server.domain.com:34.102.192.4   -t salrashid123/grpc_backend /grpc_client --host server.domain.com:443
+2020/01/07 20:44:39 RPC Response: 0 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-9xjk2"
+2020/01/07 20:44:40 RPC Response: 1 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-8xhs5"
+2020/01/07 20:44:41 RPC Response: 2 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-9xjk2"
+2020/01/07 20:44:42 RPC Response: 3 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-8xhs5"
+2020/01/07 20:44:43 RPC Response: 4 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-8xhs5"
+2020/01/07 20:44:44 RPC Response: 5 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-9xjk2"
+2020/01/07 20:44:45 RPC Response: 6 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-9xjk2"
+2020/01/07 20:44:46 RPC Response: 7 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-9xjk2"
+2020/01/07 20:44:48 RPC Response: 8 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-9xjk2"
+2020/01/07 20:44:49 RPC Response: 9 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-9xjk2"
+```
+
+* Internal:
+
+```
+root@l7-ilb-client-us-central1-a:~# docker run --add-host server.domain.com:10.128.15.240   -t salrashid123/grpc_backend /grpc_client --host server.domain.com:443
+2020/01/07 20:43:41 RPC Response: 0 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-8xhs5"
+2020/01/07 20:43:42 RPC Response: 1 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-9xjk2"
+2020/01/07 20:43:43 RPC Response: 2 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-8xhs5"
+2020/01/07 20:43:44 RPC Response: 3 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-9xjk2"
+2020/01/07 20:43:45 RPC Response: 4 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-8xhs5"
+2020/01/07 20:43:46 RPC Response: 5 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-9xjk2"
+2020/01/07 20:43:47 RPC Response: 6 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-8xhs5"
+2020/01/07 20:43:48 RPC Response: 7 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-9xjk2"
+2020/01/07 20:43:49 RPC Response: 8 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-8xhs5"
+2020/01/07 20:43:50 RPC Response: 9 message:"Hello unary RPC msg   from hostname fe-deployment-cff4c8475-9xjk2" 
+```
+
