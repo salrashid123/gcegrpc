@@ -13,6 +13,16 @@ In this mode, k8s service does not return the single destination for Service but
 
 Given the set of ip addresses, the grpc client will send each rpc to different pods and evenly distribute load.
 
+`Update 5/4/20`: 
+Headless service will seed an initial set of POD addresses directly to the client and will not Refresh that set. That means once a client gets the list of IPs it will not know about _new_ pods that kubernetes spins up. It will only keep the existing set (you can remove stale/old clients using the [keepalive](https://godoc.org/google.golang.org/grpc/keepalive) but that willnot inform you of new pods)
+
+References: [gRPC Load Balancing on Kubernetes without Tears](https://kubernetes.io/blog/2018/11/07/grpc-load-balancing-on-kubernetes-without-tears/)
+
+One option maybe to create a connection pool handler that periodically refreshes the set: from @teivah : [sample pool implementation](https://github.com/teivah/tourniquet/blob/master/tourniquet.go)
+
+The other is to use xds balancer but that is much too experimental now
+
+
 ## Setup
 
 ### Setup Applicaiton
