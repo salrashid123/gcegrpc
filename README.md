@@ -45,6 +45,12 @@ Also see:
 - [Summary of Cloud load balancers](https://cloud.google.com/load-balancing/docs/choosing-load-balancer#summary_of_cloud_load_balancers)
 - [GCP LoadBalancing Overview](https://cloud.google.com/load-balancing/docs/load-balancing-overview#internal_tcpudp_load_balancing)
 
+
+
+
+`Update 5/14/20`: Also see [xds gRPC Loadbalancing](https://github.com/salrashid123/grpc_xds).  Using xDS client-side only loadbalancing is woudl be the recommended way for internal service->service LB at scale.  However, it is quite experimental at the moment and cannot be easily deployed on GKE/GCE (unless you use an xDS server like Traffic Director).
+
+
 ---
 
 ## Source and Dockerfile
