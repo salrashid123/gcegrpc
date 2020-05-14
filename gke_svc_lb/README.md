@@ -1,7 +1,7 @@
 # gRPC-GKE Service LoadBalancer "helloworld"
 
 
-Sample application demonstrating RoundRobin gRPC loadbalancing  on Kubernetes for interenal services.
+Sample application demonstrating RoundRobin gRPC loadbalancing  on Kubernetes for internal services.
 
 
 gRPC can stream N messages over one connection.  When k8s services are involved, a single connection to the destination will terminate
@@ -12,6 +12,8 @@ One way to address this issue is insteaad define the remote service as [Headless
 In this mode, k8s service does not return the single destination for Service but instead all destination addresses back to a lookup request.
 
 Given the set of ip addresses, the grpc client will send each rpc to different pods and evenly distribute load.
+
+`Update 5/14/20`: Also see [xds gRPC Loadbalancing](https://github.com/salrashid123/grpc_xds).  Using xDS client-side only loadbalancing is woudl be the recommended way for internal service->service LB at scale.  However, it is quite experimental at the moment and cannot be easily deployed on GKE/GCE (unless you use an xDS server like Traffic Director).
 
 `Update 5/4/20`: 
 Headless service will seed an initial set of POD addresses directly to the client and will not Refresh that set. That means once a client gets the list of IPs it will not know about _new_ pods that kubernetes spins up. It will only keep the existing set (you can remove stale/old clients using the [keepalive](https://godoc.org/google.golang.org/grpc/keepalive) but that willnot inform you of new pods)
