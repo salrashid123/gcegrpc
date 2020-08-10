@@ -1,9 +1,120 @@
 # GKE gRPC Ingress LoadBalancing
 
-Baseline samle showing gRPC clients connecting via Ingress.
+Baseline sample showing gRPC clients connecting via Ingress.
 
-In this mode one gRPC connection sends 10 rpc messages.  Ingress L7 intercepts the ssl conneciton and then transmits each RPC back to differnet pods.
+In this mode one gRPC connection sends 10 rpc messages.  Ingress L7 intercepts the ssl connection and then transmits each RPC back to different pods.
 Since each RPC goes to differnet endpoints, the load is more evenly distributed between all pods.
+
+>> **Update 8/10/20**:  GCP now support a BackendConfig that supports independent HealthChecks over HTTP that Ingress understands:
+
+- [Custom health check configuration](https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-features#direct_health)
+
+
+The BackendConfig makes the workarounds below obsolete but you still need an a POD that proxies HTTP healthcheck requests.
+
+That is you need to run an HTTP listener Container on the same gRPC Service POD (.,e run your grpc service in one pod and run an http proxy healthcheck in another).  Previously, you had to effectively run HTTP and gRPC on the same serving Port.
+
+You will need to deploy your application POD that healthchecks the gRPC service
+
+For example, you can run an HTTP listener on `:8080` and a GRPC service on `:50051`.  GCP will send healtcheck requests to `:8080` which makes a GRPC healtcheck request internally to `:50051`
+
+- `podSpec(http_grpc_proxy:8080, grpc_service:50051)`
+
+The following [grpc_health_proxy](https://github.com/salrashid123/grpc_health_proxy) translates HTTP requests into gRPC HealCheck Protocol.
+
+This configuration is described in `gke_ingress_lb_backend_config/` folder.
+
+To deploy, start GKE Cluster `1.17.6-gke.11B` or higher
+
+
+```bash
+cd gke_ingress_lb_backend_config
+kubectl apply -f .
+```
+
+Wait for the Ingress and Loadbalancer configurations to allocate an IP and test as described below.
+
+
+How it works: 
+
+Look at `fe-srv-ingress.yaml` file for the `BackendConfig`:
+
+```yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fe-srv-ingress
+  labels:
+    type: fe-srv
+  annotations:
+    service.alpha.kubernetes.io/app-protocols: '{"fe":"HTTP2"}'
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: '{"default": "fe-grpc-backendconfig"}'
+spec:
+  type: NodePort 
+  ports:
+  - name: fe
+    port: 50051
+    protocol: TCP
+    targetPort: 50051
+  selector:
+    app: fe
+---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: fe-grpc-backendconfig
+spec:
+  healthCheck:
+    type: HTTP2
+    requestPath: /
+    port: 8080
+```
+
+
+What that describes is http healthcheck that will send requests to `/` on port `:8080`.  The Ingress rule specifies HTTP2 traffic to port `:50051` for `selector: app:fe` and also uses the healthchecks defined by `fe-grpc-backendconfig`.
+
+
+A couple of notes about SSL.  The configuration described in this article uses TLS from start to finish:
+
+- `client -> SSL -> L7LB (ingress) -> SSL -> (gRPC Application Service)`
+- `GCP HTTP2 Healtcheck -> SSL -> (healthCheck Proxy) --> SSL (gRPC HealthCheck Service)`
+
+The effective configuration for the HealthCheck Proxy then handles TLS from GCP's Healthcheck and also makes a new TLS connection to the service POD
+```yaml
+    spec:
+      containers:
+      - name: hc-proxy
+        image: docker.io/salrashid123/grpc_health_proxy:1.0.0
+        args: [
+          "--http-listen-addr=0.0.0.0:8080",
+          "--grpcaddr=localhost:50051",
+          "--service-name=echo.EchoServer",
+          "--https-listen-ca=/config/CA_crt_hc.pem",
+          "--https-listen-cert=/certs/http_server_crt.pem",
+          "--https-listen-key=/certs/http_server_key.pem",
+          "--grpctls",        
+          "--grpc-sni-server-name=server.domain.com",
+          "--grpc-ca-cert=/config/CA_crt_grpc_server.pem",
+          "--logtostderr=1",
+          "-v=1"
+        ]
+      - name: grpc-app
+        image: salrashid123/grpc_only_backend
+        args: [
+          "/grpc_server",
+          "--grpcport=0.0.0.0:50051"
+        ]
+        ports:
+        - containerPort: 50051        
+```
+
+*****************
+
+---
+
+** The section below is DEPRECATED **
 
 As of 4/19, GKE does not support [gRPC HelthChecks](https://github.com/grpc/grpc/blob/master/doc/health-checking.md) and
 instead relies on ordinary HTTP healthchecks which must retrun a `200` (by default against `/` endpoint on the _same_ service
@@ -14,12 +125,12 @@ What this implies is you cannot use the same gRPC listener port within your depl
 that processes both oridnary http2 requests for healthchecks and the gRPC service itself.
 
 For example, `/` endpoint is handled by your application as a healthcheck that can return `200 OK` back to GCE's healtcheck.
-GRPC requests for aservice (eg `/echo.EchoService/SayHello`) must be routeable on the _same_ port.  This requires either a mux capable of
+GRPC requests for a service (eg `/echo.EchoService/SayHello`) must be routeable on the _same_ port.  This requires either a mux capable of
 both HTTP2 and gRPC requests (the latter over http2, ofcourse)
 
-There are two variations/implementations within the `gke_ingress_lb/` folder that demonstrates these workarounds:
+There are three variations/implementations within the `gke_ingress_lb/` folder that demonstrates these workarounds:
 
-* 
+* `gke_ingress_lb/gke_ingress_lb_backend_config`:  This is the recommended configuration  << use this
 
 * `gke_ingress_lb/gke_ingress_lb_mux`:  golang mux handler where one port `:50051` on the container can process HTTP2 traffic that is
 both non-GRPC and HTTP2 healthchecks for the `/` endpoint.  The mux handler delegates the request to one of the backend handlers based
