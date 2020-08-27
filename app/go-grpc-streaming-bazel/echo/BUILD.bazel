@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+
+proto_library(
+    name = "echo_proto",
+    srcs = ["echo.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "echo_go_proto",
+    compiler = "@io_bazel_rules_go//proto:go_grpc",
+    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
+    importpath = "github.com/salrashid123/go-grpc-bazel-docker/echo/echo",
+    proto = ":echo_proto",
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "go_default_library",
+    embed = [":echo_go_proto"],
+    importpath = "github.com/salrashid123/go-grpc-bazel-docker/echo/echo",
+    visibility = ["//visibility:public"],
+)
