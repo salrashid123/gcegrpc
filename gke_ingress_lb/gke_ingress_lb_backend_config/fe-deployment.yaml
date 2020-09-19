@@ -43,10 +43,16 @@ spec:
         image: salrashid123/grpc_only_backend
         args: [
           "/grpc_server",
-          "--grpcport=0.0.0.0:50051"
+          "--grpcport=0.0.0.0:50051",
+          "--tlsCert=/certs/grpc_server_crt.pem",
+          "--tlsKey=/certs/grpc_server_key.pem"        
         ]
         ports:
         - containerPort: 50051
+        volumeMounts:
+          - name: grpc-certs-vol
+            mountPath: /certs
+            readOnly: true          
       volumes:
       - name: config-vol
         configMap:
@@ -64,4 +70,12 @@ spec:
             path: http_server_crt.pem
           - key: http_server_key.pem
             path: http_server_key.pem
+      - name: grpc-certs-vol
+        secret:
+          secretName: grpc-secret
+          items:
+          - key: grpc_server_crt.pem
+            path: grpc_server_crt.pem
+          - key: grpc_server_key.pem
+            path: grpc_server_key.pem
 

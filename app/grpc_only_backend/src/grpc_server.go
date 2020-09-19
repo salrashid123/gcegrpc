@@ -22,6 +22,8 @@ import (
 
 var (
 	grpcport = flag.String("grpcport", "", "grpcport")
+	tlsCert  = flag.String("tlsCert", "server_crt.pem", "TLS Server Certificate")
+	tlsKey   = flag.String("tlsKey", "server_key.pem", "TLS Server Key")
 	insecure = flag.Bool("insecure", false, "startup without TLS")
 
 	hs *health.Server
@@ -81,7 +83,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	ce, err := credentials.NewServerTLSFromFile("server_crt.pem", "server_key.pem")
+	ce, err := credentials.NewServerTLSFromFile(*tlsCert, *tlsKey)
 	if err != nil {
 		log.Fatalf("Failed to generate credentials %v", err)
 	}

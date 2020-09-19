@@ -26,6 +26,11 @@ This configuration is described in `gke_ingress_lb_backend_config/` folder.
 
 To deploy, start GKE Cluster `1.17.6-gke.11B` or higher
 
+```
+gcloud container  clusters create cluster-grpc \
+ --zone us-central1-a  --num-nodes 3 --enable-ip-alias \
+ --cluster-version "1.18.6-gke.4801"
+```
 
 ```bash
 cd gke_ingress_lb_backend_config
@@ -104,10 +109,12 @@ The effective configuration for the HealthCheck Proxy then handles TLS from GCP'
         image: salrashid123/grpc_only_backend
         args: [
           "/grpc_server",
-          "--grpcport=0.0.0.0:50051"
+          "--grpcport=0.0.0.0:50051",
+          "--tlsCert=/certs/grpc_server_crt.pem",
+          "--tlsKey=/certs/grpc_server_key.pem"        
         ]
         ports:
-        - containerPort: 50051        
+        - containerPort: 50051    
 ```
 
 *****************
