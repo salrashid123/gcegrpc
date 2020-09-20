@@ -10,6 +10,12 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+
+	"github.com/google/uuid"
+
+	"google.golang.org/grpc/codes"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -21,9 +27,21 @@ const ()
 type server struct {
 }
 
+type healthServer struct{}
+
+func (s *healthServer) Check(ctx context.Context, in *healthpb.HealthCheckRequest) (*healthpb.HealthCheckResponse, error) {
+	log.Printf("Handling grpc Check request")
+	return &healthpb.HealthCheckResponse{Status: healthpb.HealthCheckResponse_SERVING}, nil
+}
+
+func (s *healthServer) Watch(in *healthpb.HealthCheckRequest, srv healthpb.Health_WatchServer) error {
+	return status.Error(codes.Unimplemented, "Watch is not implemented")
+}
+
 func (s *server) SayHelloUnary(ctx context.Context, in *echo.EchoRequest) (*echo.EchoReply, error) {
 	log.Println("Got Unary Request: ")
-	return &echo.EchoReply{Message: "SayHelloUnary Response "}, nil
+	uid, _ := uuid.NewUUID()
+	return &echo.EchoReply{Message: "SayHelloUnary Response " + uid.String()}, nil
 }
 
 func (s *server) SayHelloServerStream(in *echo.EchoRequest, stream echo.EchoServer_SayHelloServerStreamServer) error {
@@ -85,6 +103,7 @@ func main() {
 	s := grpc.NewServer(sopts...)
 
 	echo.RegisterEchoServerServer(s, &server{})
+	healthpb.RegisterHealthServer(s, &healthServer{})
 
 	s.Serve(lis)
 

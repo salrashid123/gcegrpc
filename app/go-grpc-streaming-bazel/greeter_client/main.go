@@ -12,6 +12,8 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 const ()
@@ -42,6 +44,15 @@ func main() {
 
 	c := echo.NewEchoServerClient(conn)
 	ctx := context.Background()
+
+	resp, err := healthpb.NewHealthClient(conn).Check(ctx, &healthpb.HealthCheckRequest{Service: "helloworld.GreeterServer"})
+	if err != nil {
+		log.Fatalf("HealthCheck failed %+v", err)
+	}
+	if resp.GetStatus() != healthpb.HealthCheckResponse_SERVING {
+		log.Fatalf("service not in serving state: ", resp.GetStatus().String())
+	}
+	log.Printf("RPC HealthChekStatus:%v", resp.GetStatus())
 
 	/// UNARY
 	for i := 0; i < 5; i++ {

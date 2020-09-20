@@ -37,9 +37,9 @@ static_resources:
           alpn_protocols: h2
           tls_certificates:
             - certificate_chain:
-                filename: "grpc_server_crt.pem"
+                filename: "../../../certs/server_crt.pem"
               private_key:
-                filename: "grpc_server_crt.pem"
+                filename: "../../../certs/server_key.pem"
   - name: listener_hc
     address:
       socket_address: { address: 0.0.0.0, port_value: 8080 }
@@ -93,10 +93,9 @@ static_resources:
           alpn_protocols: h2
           tls_certificates:
             - certificate_chain:
-                filename: "http_server_crt.pem"
+                filename: "../../../certs/server_crt.pem"
               private_key:
-                filename: "http_server_key.pem"
-
+                filename: "../../../certs/server_key.pem"
   clusters:
   - name: local_grpc_endpoint
     connect_timeout: 0.05s
