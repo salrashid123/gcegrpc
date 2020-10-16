@@ -33,7 +33,10 @@ func main() {
 	if *cacert == "" {
 		conn, err = grpc.Dial(*address, grpc.WithInsecure())
 	} else {
-		creds, _ := credentials.NewClientTLSFromFile(*cacert, "")
+		creds, err := credentials.NewClientTLSFromFile(*cacert, "")
+		if err != nil {
+			log.Fatalf("failed  to get cacerts %+v", err)
+		}
 		conn, err = grpc.Dial(*address, grpc.WithTransportCredentials(creds))
 	}
 
@@ -45,7 +48,7 @@ func main() {
 	c := echo.NewEchoServerClient(conn)
 	ctx := context.Background()
 
-	resp, err := healthpb.NewHealthClient(conn).Check(ctx, &healthpb.HealthCheckRequest{Service: "helloworld.GreeterServer"})
+	resp, err := healthpb.NewHealthClient(conn).Check(ctx, &healthpb.HealthCheckRequest{Service: "echo.EchoServer"})
 	if err != nil {
 		log.Fatalf("HealthCheck failed %+v", err)
 	}
