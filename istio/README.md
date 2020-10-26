@@ -4,7 +4,6 @@
 
 Demonstrates gRPC loadbalancing with Istio where mesh-external clients connect via GCP external and internal LoadBalancers:
 
-
 - `client_grpc_app (on GCEVM) --> (GCP ILB) --> Istio --> Service`
 
 - `client_grpc_app (external) --> (GCP ExternalLB) --> Istio --> Service`
@@ -14,16 +13,14 @@ Demonstrates gRPC loadbalancing with Istio where mesh-external clients connect v
 
 1) Install GKE+Istio
 
-``bash
-# Follow instructions here https://github.com/salrashid123/istio_helloworld#create-a-118-gke-cluster-and-bootstrap-istio
+Follow instructions here [https://github.com/salrashid123/istio_helloworld#create-a-118-gke-cluster-and-bootstrap-istio](https://github.com/salrashid123/istio_helloworld#create-a-118-gke-cluster-and-bootstrap-istio)
 
+```bash
 $ git clone https://github.com/salrashid123/istio_helloworld.git
 
-# until apply istio namespace
+# stop right _after_ you apply the namespace label
 $ kubectl label namespace default istio-injection=enabled
 ```
-
-
 
 2) Verify external and ILB IP addresses
 
@@ -35,30 +32,7 @@ echo $GATEWAY_IP
 kubectl get svc istio-ilbgateway  -n istio-system
 export ILB_GATEWAY_IP=$(kubectl -n istio-system get service istio-ilbgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 echo $ILB_GATEWAY_IP
-
 ```
-
-```
-$ kubectl get no,po,rc,svc,ing,deployment -n istio-system
-```
-
-3) Deploy sample application
-
-Source code for the sample application is in the `apps/` folder for this repo.
-
-The grpc application creates one gRPC Channel to the server and on that one connection, sends 10 RPC requests.
-
-```
-kubectl apply -f fe-certs.yaml
-
-kubectl apply -f all-istio.yaml 
-
-kubectl apply -f istio-fe.yaml \
-   -f istio-ilbgateway-service.yaml -f istio-ingress-gateway.yaml \
-   -f istio-ingress-ilbgateway.yaml
-```
-
-After sometime, you should see
 
 istio deployment
 
@@ -88,10 +62,25 @@ $ kubectl get no,po,rc,svc,ing,deployment -n istio-system
       deployment.apps/istio-ilbgateway       1/1     1            1           10m
       deployment.apps/istio-ingressgateway   1/1     1            1           10m
       deployment.apps/istiod                 1/1     1            1           11m
-
 ```
 
-and your application
+3) Deploy sample application
+
+Source code for the sample application is in the `apps/` folder for this repo.
+
+The grpc application creates one gRPC Channel to the server and on that one connection, sends 10 RPC requests.
+
+```
+kubectl apply -f fe-certs.yaml
+
+kubectl apply -f all-istio.yaml 
+
+kubectl apply -f istio-fe.yaml \
+   -f istio-ilbgateway-service.yaml -f istio-ingress-gateway.yaml \
+   -f istio-ingress-ilbgateway.yaml
+```
+
+After sometime, you should see
 
 ```bash
 $ kubectl get po,rc,svc,ing,deployment 
