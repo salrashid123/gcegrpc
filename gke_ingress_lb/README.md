@@ -33,7 +33,7 @@ gcloud container  clusters create cluster-grpc \
 ```
 
 ```bash
-cd gke_ingress_lb_backend_config
+cd gcegrpc/gke_ingress_lb
 kubectl apply -f .
 ```
 
@@ -58,7 +58,7 @@ metadata:
     type: fe-srv
   annotations:
     service.alpha.kubernetes.io/app-protocols: '{"fe":"HTTP2"}'
-    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/neg: '{"ingress": true, "exposed_ports": {"50051":{}}}'
     cloud.google.com/backend-config: '{"default": "fe-grpc-backendconfig"}'
 spec:
   type: ClusterIP 
