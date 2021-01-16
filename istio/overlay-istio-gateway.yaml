@@ -1,0 +1,26 @@
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+spec:
+  components:
+    ingressGateways:
+      - name: istio-ingressgateway
+        enabled: true
+        k8s:
+          service:
+            ports:
+            - name: https
+              port: 443
+              protocol: TCP
+      - name: istio-ilbgateway
+        enabled: true
+        k8s:
+          serviceAnnotations:
+            cloud.google.com/load-balancer-type: "internal"
+          service:
+            ports:
+            - port: 443
+              name: https
+              protocol: TCP
+    egressGateways:
+      - name: istio-egressgateway
+        enabled: true

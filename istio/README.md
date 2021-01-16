@@ -9,18 +9,37 @@ Demonstrates gRPC loadbalancing with Istio where mesh-external clients connect v
 - `client_grpc_app (external) --> (GCP ExternalLB) --> Istio --> Service`
 
 
-- uses ISTIO version `1.7.2`
+- uses ISTIO version `1.8.1`
 
 1) Install GKE+Istio
 
-Follow instructions here [https://github.com/salrashid123/istio_helloworld#create-a-118-gke-cluster-and-bootstrap-istio](https://github.com/salrashid123/istio_helloworld#create-a-118-gke-cluster-and-bootstrap-istio)
-
-```bash
-$ git clone https://github.com/salrashid123/istio_helloworld.git
-
-# stop right _after_ you apply the namespace label
-$ kubectl label namespace default istio-injection=enabled
 ```
+gcloud container  clusters create istio-1 --machine-type "n1-standard-2" --zone us-central1-a  --num-nodes 4 \
+   --enable-ip-alias --cluster-version "1.19" -q
+
+gcloud container clusters get-credentials istio-1 --zone us-central1-a
+
+kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=$(gcloud config get-value core/account)
+
+kubectl create ns istio-system
+
+export ISTIO_VERSION=1.8.1
+
+wget -P /tmp/ https://github.com/istio/istio/releases/download/$ISTIO_VERSION/istio-$ISTIO_VERSION-linux-amd64.tar.gz
+tar xvf /tmp/istio-$ISTIO_VERSION-linux-amd64.tar.gz -C /tmp/
+rm /tmp/istio-$ISTIO_VERSION-linux-amd64.tar.gz
+
+export PATH=/tmp/istio-$ISTIO_VERSION/bin:$PATH
+
+istioctl install --set profile=demo \
+ --set meshConfig.enableAutoMtls=true  \
+ --set values.gateways.istio-ingressgateway.runAsRoot=true \
+ --set meshConfig.outboundTrafficPolicy.mode=REGISTRY_ONLY \
+ -f overlay-istio-gateway.yaml
+
+kubectl label namespace default istio-injection=enabled
+```
+
 
 2) Verify external and ILB IP addresses
 
@@ -70,14 +89,21 @@ Source code for the sample application is in the `apps/` folder for this repo.
 
 The grpc application creates one gRPC Channel to the server and on that one connection, sends 10 RPC requests.
 
-```
+```bash
 kubectl apply -f fe-certs.yaml
 
 kubectl apply -f all-istio.yaml 
 
 kubectl apply -f istio-fe.yaml \
-   -f istio-ilbgateway-service.yaml -f istio-ingress-gateway.yaml \
-   -f istio-ingress-ilbgateway.yaml
+   -f istio-ingress-ilbgateway.yaml \
+    -f istio-ingress-gateway.yaml
+
+# regenerate the ingress-gateway to pickup the certs
+INGRESS_POD_NAME=$(kubectl get po -n istio-system | grep ingressgateway\- | awk '{print$1}'); echo ${INGRESS_POD_NAME};
+kubectl delete po/$INGRESS_POD_NAME -n istio-system
+
+ILB_INGRESS_POD_NAME=$(kubectl get po -n istio-system | grep ilbgateway\- | awk '{print$1}'); echo ${INGRESS_POD_ILB_INGRESS_POD_NAMENAME};
+kubectl delete po/$ILB_INGRESS_POD_NAME -n istio-system
 ```
 
 After sometime, you should see
@@ -104,13 +130,6 @@ as well as the serivce on GKE console
 ![images/gke_ilb.png](images/gke_ilb.png)
 
 
-You many need to reload the ingress gateway (theres a race condition where thecerts are read in before creation ...i need to figure out how to fix it)
-
-to reload the ingress gateway, run
-```bash
-INGRESS_POD_NAME=$(kubectl get po -n istio-system | grep ingressgateway\- | awk '{print$1}'); echo ${INGRESS_POD_NAME};
-kubectl delete po/$INGRESS_POD_NAME -n istio-system
-```
 ### Verify External client connectivity
 
 wait about 10mins (really, you need to wait)
