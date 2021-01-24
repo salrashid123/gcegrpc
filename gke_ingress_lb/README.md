@@ -1,6 +1,6 @@
 # GKE gRPC Ingress LoadBalancing
 
-Baseline sample showing gRPC clients connecting via Ingress.
+Sample showing gRPC clients connecting via Ingress.
 
 In this mode one gRPC connection sends 10 rpc messages.  Ingress L7 intercepts the ssl connection and then transmits each RPC back to different pods.
 Since each RPC goes to different endpoints, the load is more evenly distributed between all pods.
@@ -10,26 +10,22 @@ Since each RPC goes to different endpoints, the load is more evenly distributed 
 - [Custom health check configuration](https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-features#direct_health)
 
 
-The BackendConfig makes the workarounds using mux and envoy described in prvious commints in this repo obsolete but you still need an a POD that proxies HTTP healthcheck requests.
+The BackendConfig makes the workarounds using mux and envoy described in previous commits in this repo obsolete but you still need an a POD that proxies HTTP healthcheck requests.
 
-That is you need to run an HTTP listener Container on the same gRPC Service POD (.,e run your grpc service in one pod and run an http proxy healthcheck in another).  Previously, you had to effectively run HTTP and gRPC on the same serving Port.
+You still need to run an HTTP listener Container on the same gRPC Service POD (ie run your grpc service in one container and run an http proxy healthcheck in another).  Previously, you had to effectively run HTTP and gRPC on the same Serving Port.
 
-You will need to deploy your application POD that healthchecks the gRPC service
-
-For example, you can run an HTTP listener on `:8080` and a GRPC service on `:50051`.  GCP will send healtcheck requests to `:8080` which makes a GRPC healtcheck request internally to `:50051`
+For example, you can run an HTTP listener on `:8080` and a GRPC service on `:50051`.  GCP will send healthcheck requests to `:8080` which makes a GRPC healtcheck request internally to `:50051`
 
 - `podSpec(http_grpc_proxy:8080, grpc_service:50051)`
 
 The following [grpc_health_proxy](https://github.com/salrashid123/grpc_health_proxy) translates HTTP requests into gRPC HealCheck Protocol.
 
-This configuration is described in `gke_ingress_lb_backend_config/` folder.
-
-To deploy, start GKE Cluster `1.18.6` or higher
+To deploy, start GKE Cluster `1.18` or higher
 
 ```
 gcloud container  clusters create cluster-grpc \
  --zone us-central1-a  --num-nodes 3 --enable-ip-alias \
- --cluster-version "1.18.6"
+ --cluster-version "1.18"
 ```
 
 ```bash
@@ -38,15 +34,11 @@ kubectl apply -f .
 ```
 
 Wait for the Ingress and Loadbalancer configurations to allocate an IP and test as described below.
+(wait maybe 8mins)
 
-
-How it works: 
 
 Look at `fe-srv-ingress.yaml` file for the `BackendConfig`:
 
-See [Creating a Service for a container-native load balancer](https://cloud.google.com/kubernetes-engine/docs/how-to/container-native-load-balancing)
-
->>  A Service of type ClusterIP is recommended unless you explicitly need the nodePort provided by a NodePort Service.
 
 ```yaml
 ---
@@ -57,7 +49,7 @@ metadata:
   labels:
     type: fe-srv
   annotations:
-    service.alpha.kubernetes.io/app-protocols: '{"fe":"HTTP2"}'
+    cloud.google.com/app-protocols: '{"fe":"HTTP2"}'
     cloud.google.com/neg: '{"ingress": true, "exposed_ports": {"50051":{}}}'
     cloud.google.com/backend-config: '{"default": "fe-grpc-backendconfig"}'
 spec:
@@ -84,6 +76,12 @@ spec:
 
 What that describes is http healthcheck that will send requests to `/` on port `:8080`.  The Ingress rule specifies HTTP2 traffic to port `:50051` for `selector: app:fe` and also uses the healthchecks defined by `fe-grpc-backendconfig`.
 
+See [Creating a Service for a container-native load balancer](https://cloud.google.com/kubernetes-engine/docs/how-to/container-native-load-balancing)
+
+>>  A Service of type ClusterIP is recommended unless you explicitly need the nodePort provided by a NodePort Service.
+
+
+>> **NOTE**: HTTP2 Healthchecks on GCP _requires_ https ([health-check-concepts](https://cloud.google.com/load-balancing/docs/health-check-concepts#category_and_protocol))
 
 A couple of notes about SSL.  The configuration described in this article uses TLS from start to finish:
 
@@ -129,7 +127,7 @@ The effective configuration for the HealthCheck Proxy then handles TLS from GCP'
 
 $ gcloud container  clusters create cluster-grpc \
    --zone us-central1-a  --num-nodes 3 --enable-ip-alias \
-   --cluster-version "1.18.6"
+   --cluster-version "1.19"
 ```
 
 
