@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fe-deployment
+  labels:
+    app: fe
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fe
+  template:
+    metadata:
+      labels:
+        app: fe
+    spec:
+      containers:       
+      - name: grpc-app
+        image: salrashid123/grpc_only_backend
+        args: [
+          "/grpc_server",
+          "--grpcport=0.0.0.0:50051",
+          "--insecure"     
+        ]
+        ports:
+        - containerPort: 50051
+

@@ -11,6 +11,13 @@ Samples for running gRPC on GKE and Istio:
 
 - Folder: `gke_ingress_lb/`
 
+
+## gRPC Loadbalancing on GKE with TrafficDirector (xds loadbalancing)
+
+`client_grpc_app  (acquire gRPC lookaside loadbalancing/XDS) --> GKE pod NEG address`
+
+- Folder: `gke_td_xds/`
+
 ## gRPC-web via Ingress
 
  Javascript clients:  
