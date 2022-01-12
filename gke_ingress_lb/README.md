@@ -24,8 +24,7 @@ To deploy, start GKE Cluster `1.18` or higher
 
 ```
 gcloud container  clusters create cluster-grpc \
- --zone us-central1-a  --num-nodes 3 --enable-ip-alias \
- --cluster-version "1.18"
+ --zone us-central1-a  --num-nodes 3 --enable-ip-alias
 ```
 
 ```bash
@@ -102,7 +101,7 @@ The effective configuration for the HealthCheck Proxy then handles TLS from GCP'
           "--https-listen-cert=/certs/http_server_crt.pem",
           "--https-listen-key=/certs/http_server_key.pem",
           "--grpctls",        
-          "--grpc-sni-server-name=server.domain.com",
+          "--grpc-sni-server-name=grpc.domain.com",
           "--grpc-ca-cert=/config/CA_crt_grpc_server.pem",
           "--logtostderr=1",
           "-v=1"
@@ -170,9 +169,9 @@ service/kubernetes       ClusterIP      10.4.0.1     <none>          443/TCP    
 Test with Network LB:
 
 ```bash
-$ docker run --add-host server.domain.com:35.224.74.161 \
+$ docker run --add-host grpc.domain.com:35.224.74.161 \
   -t salrashid123/grpc_backend /grpc_client \
-  --host server.domain.com:50051
+  --host grpc.domain.com:50051
 
 2020/09/21 21:38:00 RPC Response: 0 message:"Hello unary RPC msg   from hostname fe-deployment-5956bb98d-7l4g8" 
 2020/09/21 21:38:01 RPC Response: 1 message:"Hello unary RPC msg   from hostname fe-deployment-5956bb98d-7l4g8" 
@@ -189,9 +188,9 @@ $ docker run --add-host server.domain.com:35.224.74.161 \
 Now test with the Ingress LB:
 
 ```bash
-$ docker run --add-host server.domain.com:34.120.99.146 \
+$ docker run --add-host grpc.domain.com:34.120.99.146 \
   -t salrashid123/grpc_backend /grpc_client \
-  --host server.domain.com:443
+  --host grpc.domain.com:443
 
 2020/09/21 21:38:13 RPC Response: 0 message:"Hello unary RPC msg   from hostname fe-deployment-5956bb98d-sm7xc" 
 2020/09/21 21:38:14 RPC Response: 1 message:"Hello unary RPC msg   from hostname fe-deployment-5956bb98d-sm7xc" 
@@ -210,9 +209,9 @@ $ docker run --add-host server.domain.com:34.120.99.146 \
 
 On a VM within GCP:
 ```bash
-$ docker run --add-host server.domain.com:10.128.0.95 \
+$ docker run --add-host grpc.domain.com:10.128.0.95 \
    -t salrashid123/grpc_backend /grpc_client \
-   --host server.domain.com:443
+   --host grpc.domain.com:443
 
 2020/09/21 21:39:55 RPC Response: 0 message:"Hello unary RPC msg   from hostname fe-deployment-5956bb98d-7l4g8" 
 2020/09/21 21:39:56 RPC Response: 1 message:"Hello unary RPC msg   from hostname fe-deployment-5956bb98d-sm7xc" 

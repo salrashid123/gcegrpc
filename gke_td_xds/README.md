@@ -1,6 +1,6 @@
 # GKE gRPC with TrafficDirector
 
-Sample showing gRPC using Traffic Direct Proxyless Loadbalancing
+Sample showing gRPC using Traffic Director Proxyless Loadbalancing
 
 - [Traffic Director setup with Google Kubernetes Engine and proxyless gRPC services](https://cloud.google.com/traffic-director/docs/set-up-proxyless-gke)
 

@@ -25,7 +25,7 @@ spec:
           "--https-listen-cert=/certs/http_server_crt.pem",
           "--https-listen-key=/certs/http_server_key.pem",
           "--grpctls",        
-          "--grpc-sni-server-name=server.domain.com",
+          "--grpc-sni-server-name=grpc.domain.com",
           "--grpc-ca-cert=/config/CA_crt_grpc_server.pem",
           "--logtostderr=1",
           "-v=1"

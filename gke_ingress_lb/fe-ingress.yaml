@@ -1,15 +1,23 @@
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: fe-ingress
   annotations:
     kubernetes.io/ingress.class: "gce"
-    kubernetes.io/ingress.allow-http: "false"   
+    kubernetes.io/ingress.allow-http: "false"
 spec:
   tls:
   - hosts:
-    - server.domain.com
+    - grpc.domain.com
     secretName: fe-secret
-  backend:
-    serviceName: fe-srv-ingress
-    servicePort: 50051
+  rules:
+  - host: "grpc.domain.com"
+    http:
+      paths:
+      - path: "/echo.EchoServer/*"
+        pathType: ImplementationSpecific        
+        backend:
+          service:
+            name: fe-srv-ingress
+            port:
+              number: 50051
