@@ -3,11 +3,12 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"echo"
 	"flag"
 	"io/ioutil"
 	"log"
 	"time"
+
+	"github.com/salrashid123/gcegrpc/app/echo"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

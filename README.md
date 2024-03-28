@@ -9,14 +9,14 @@ Samples for running gRPC on GKE and Istio:
 
 `client_grpc_app  (via gRPC wire protocol) --> ingress --> (grpc Service on GKE)`
 
-- Folder: `gke_ingress_lb/`
+- Folder: [gke_ingress_lb/](gke_ingress_lb/)
 
 
 ## gRPC Loadbalancing on GKE with TrafficDirector (xds loadbalancing)
 
 `client_grpc_app  (acquire gRPC lookaside loadbalancing/XDS) --> GKE pod NEG address`
 
-- Folder: `gke_td_xds/`
+- Folder: [gke_td_xds/](gke_td_xds/)
 
 ## gRPC-web via Ingress
 
@@ -28,14 +28,14 @@ Samples for running gRPC on GKE and Istio:
 
 ## gRPC for GKE internal Service->Service
 
-- Folder `gke_svc_lb/`
+- Folder [gke_svc_lb/](gke_svc_lb/)
       
 `client (pod running in GKE) --> k8s Service --> (gRPC endpoint in same GKE cluster)`
 
 
 ## gRPC w/ Managed Instance Group with Container Optimized OS
 
-- Folder `gce`
+- Folder [gce](gce/)
 
 `client_grpc_app --> L7LB --> ManagedInstanceGroup`
 
@@ -51,11 +51,6 @@ Samples for running gRPC on GKE and Istio:
 Also see:
 - [Summary of Cloud load balancers](https://cloud.google.com/load-balancing/docs/choosing-load-balancer#summary_of_cloud_load_balancers)
 - [GCP LoadBalancing Overview](https://cloud.google.com/load-balancing/docs/load-balancing-overview#internal_tcpudp_load_balancing)
-
-
-
-
-`Update 5/14/20`: Also see [xds gRPC Loadbalancing](https://github.com/salrashid123/grpc_xds).  Using xDS client-side only loadbalancing is woudl be the recommended way for internal service->service LB at scale.  However, it is quite experimental at the moment and cannot be easily deployed on GKE/GCE (unless you use an xDS server like Traffic Director).
 
 
 ---

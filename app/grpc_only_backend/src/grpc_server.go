@@ -1,7 +1,6 @@
 package main
 
 import (
-	"echo"
 	"flag"
 	"fmt"
 	"log"
@@ -9,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/salrashid123/gcegrpc/app/echo"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

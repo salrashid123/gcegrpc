@@ -1,8 +1,9 @@
 package main
 
 import (
-	"echo"
 	"flag"
+
+	"github.com/salrashid123/gcegrpc/app/echo"
 
 	"log"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"google.golang.org/grpc"
 
 	//	"google.golang.org/grpc/resolver"
+	"google.golang.org/grpc/credentials/insecure"
 	_ "google.golang.org/grpc/xds"
 )
 
@@ -24,7 +26,7 @@ func main() {
 
 	address := flag.String("host", "xds:///fe-srv-td:50051", "XDS Servers Listener Name")
 	flag.Parse()
-	conn, err := grpc.Dial(*address, grpc.WithInsecure())
+	conn, err := grpc.Dial(*address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)

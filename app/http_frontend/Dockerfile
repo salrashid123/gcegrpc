@@ -1,35 +1,31 @@
-FROM golang:1.10 as build
+FROM golang:1.20 as build
 
 RUN apt-get update -y && apt-get install -y build-essential wget unzip curl
 
 
-RUN curl -OL https://github.com/google/protobuf/releases/download/v3.2.0/protoc-3.2.0-linux-x86_64.zip && \
-    unzip protoc-3.2.0-linux-x86_64.zip -d protoc3 && \
+RUN curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v25.1/protoc-25.1-linux-x86_64.zip && \
+    unzip protoc-25.1-linux-x86_64.zip -d protoc3 && \
     mv protoc3/bin/* /usr/local/bin/ && \
     mv protoc3/include/* /usr/local/include/
 
 
-WORKDIR /go/
+WORKDIR /go/src/app
 
-RUN go get github.com/golang/protobuf/proto \
-           github.com/golang/protobuf/protoc-gen-go \
-           golang.org/x/net/context \
-           google.golang.org/grpc \
-           google.golang.org/grpc/credentials \
-           golang.org/x/oauth2 \
-           golang.org/x/net/http2
-ADD . /go/
+COPY . .
+RUN go mod download
 
-RUN protoc --go_out=plugins=grpc:. src/echo/echo.proto
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
 
-RUN export GOBIN=/go/bin && go install src/http_server.go
+RUN protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=require_unimplemented_servers=false --go-grpc_out=. --go-grpc_opt=paths=source_relative src/echo/echo.proto
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /go/bin/http_server src/http_server.go
 
 
 FROM gcr.io/distroless/base
-COPY --from=build /go/server_crt.pem /
-COPY --from=build /go/server_key.pem /
-COPY --from=build /go/CA_crt.pem /
-COPY --from=build /go/bin /
+COPY --from=build /go/src/app/server_crt.pem /
+COPY --from=build /go/src/app/server_key.pem /
+COPY --from=build /go/src/app/CA_crt.pem /
+COPY --from=build /go/bin/http_server /http_server
 
 
 EXPOSE 8081

@@ -7,20 +7,21 @@ import (
 
 	"net/http"
 	"os"
-	"echo"
 	"strings"
+
+	"github.com/salrashid123/gcegrpc/app/echo"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"golang.org/x/net/context"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -78,7 +79,6 @@ func (s *server) SayHelloStream(in *echo.EchoRequest, stream echo.EchoServer_Say
 	return nil
 }
 
-
 func hchandler(w http.ResponseWriter, r *http.Request) {
 
 	//log.Print("service not in serving state: ")
@@ -89,11 +89,13 @@ func hchandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type healthServer struct{}
+
 // Check is used for gRPC health checks
 func (s *healthServer) Check(ctx context.Context, in *healthpb.HealthCheckRequest) (*healthpb.HealthCheckResponse, error) {
 	log.Printf("Handling grpc Check request")
 	return &healthpb.HealthCheckResponse{Status: healthpb.HealthCheckResponse_SERVING}, nil
 }
+
 // Watch is not implemented
 func (s *healthServer) Watch(in *healthpb.HealthCheckRequest, srv healthpb.Health_WatchServer) error {
 	return status.Error(codes.Unimplemented, "Watch is not implemented")
@@ -141,7 +143,6 @@ func main() {
 		http.DefaultServeMux.ServeHTTP(w, r)
 	})
 	log.Printf("Starting gRPC server on port %v", *grpcport)
-
 
 	if *insecure == false {
 		log.Fatal(http.ListenAndServeTLS(*grpcport, "server_crt.pem", "server_key.pem", h2c.NewHandler(muxHandler, &http2.Server{})))

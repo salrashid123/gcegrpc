@@ -43,25 +43,26 @@ What the image under
 
 
 ### Create a cluster
-```
-gcloud container  clusters create cluster-grpc --zone us-central1-a  --num-nodes 4 --cluster-version=1.16.0 --enable-ip-alias
+
+```bash
+gcloud container  clusters create cluster-grpc --zone us-central1-a  --num-nodes 3 --enable-ip-alias
 ```
 
 ### Deploy
 
-```
+```bash
 kubectl apply -f be-deployment.yaml  -f be-srv-lb.yaml  -f be-srv.yaml  -f fe-deployment.yaml  -f fe-srv.yaml
 ```
 
 Create firewall rule
 
-```
+```bash
 gcloud compute firewall-rules create allow-grpc-nlb --action=ALLOW --rules=tcp:8081 --source-ranges=0.0.0.0/0
 ```
 
 Wait ~5mins till the Network Loadblancer IP is assigned
 
-```
+```bash
 $ kubectl get no,po,deployment,svc
 NAME                                               STATUS    ROLES     AGE       VERSION
 node/gke-cluster-grpc-default-pool-aeb308a0-89dt   Ready     <none>    1h        v1.11.7-gke.12

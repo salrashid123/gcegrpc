@@ -1,5 +1,0 @@
-steps:
-- name: gcr.io/cloud-builders/bazel@sha256:77d42f9b252c6b159416b5651dd69a7861d0f2ffbea05bc5b6482caf846ec9f4
-  args: ['run', '--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64', 'greeter_server:greeter_server_image']
-
-images: ['gcr.io/$PROJECT_ID/greeter_server:greeter_server_image']

@@ -6,6 +6,7 @@ metadata:
     kubernetes.io/ingress.allow-http: "false"
     kubernetes.io/ingress.class: "gce-internal"    
 spec:
+  ingressClassName: gce-internal
   tls:
   - secretName: fe-secret
   rules:

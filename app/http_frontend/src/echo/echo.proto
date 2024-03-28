@@ -2,8 +2,10 @@ syntax = "proto3";
 
 package echo;
 
+option go_package = "github.com/salrashid123/gcegrpc/app/echo";
+
 service EchoServer {
-  rpc SayHello (EchoRequest) returns (EchoReply) {} 
+  rpc SayHello (EchoRequest) returns (EchoReply) {}  
 }
 
 message EchoRequest {

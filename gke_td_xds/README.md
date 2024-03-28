@@ -161,6 +161,8 @@ $ go run src/grpc_client.go --host xds:///fe-srv-td:50051
 
 - [gRPC xDS Loadbalancing](https://github.com/salrashid123/grpc_xds)
 - [gRPC HealthCheck Proxy](https://github.com/salrashid123/grpc_health_proxy)
+- [Proxyless gRPC with Google Traffic Director](https://github.com/salrashid123/grpc_xds_traffic_director)
+- [Kubernetes xDS service for gRPC loadbalancing](https://github.com/salrashid123/k8s_grpc_xds)
 
 ---
 

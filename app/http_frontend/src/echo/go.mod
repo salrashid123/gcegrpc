@@ -2,9 +2,9 @@ module github.com/salrashid123/gcegrpc/app/echo
 
 go 1.21
 
-require google.golang.org/grpc v1.62.1
 
 require (
+    github.com/grpc/grpc-go v1.60.0
 	github.com/golang/protobuf v1.5.3 // indirect
 	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect

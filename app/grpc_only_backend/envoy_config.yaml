@@ -9,8 +9,9 @@ static_resources:
       socket_address: { address: 0.0.0.0, port_value: 8081 }
     filter_chains:
     - filters:
-      - name: envoy.http_connection_manager
-        config:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
           stat_prefix: ingress_http
           codec_type: AUTO
           route_config:
@@ -23,16 +24,21 @@ static_resources:
                   path: "/echo.EchoServer/SayHello"
                 route: { cluster: local_grpc_endpoint  }
           http_filters:
-          - name: envoy.router
-            typed_config: {}
-      tls_context:
-        common_tls_context:
-          alpn_protocols: h2
-          tls_certificates:
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+          require_client_certificate: true
+          common_tls_context:
+            tls_certificates:
             - certificate_chain:
                 filename: "server_crt.pem"
               private_key:
                 filename: "server_key.pem"
+
 
   clusters:
   - name: local_grpc_endpoint
@@ -53,7 +59,12 @@ static_resources:
         grpc_health_check:
           service_name: "echo.EchoServer"
           authority: "server.domain.com"
-    hosts:
-    - socket_address:
-        address: 127.0.0.1
-        port_value: 50051
+    load_assignment:
+      cluster_name: local_grpc_endpoint
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: 50051

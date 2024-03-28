@@ -1,7 +1,6 @@
 package main
 
 import (
-	"echo"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -10,11 +9,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/salrashid123/gcegrpc/app/echo"
+
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
 
-	"google.golang.org/grpc/balancer/roundrobin"
 	"google.golang.org/grpc/credentials"
 
 	"golang.org/x/net/context"
@@ -39,7 +39,7 @@ func backendLBhandler(w http.ResponseWriter, r *http.Request) {
 
 	var tlsCfg tls.Config
 	rootCAs := x509.NewCertPool()
-	pem, err := ioutil.ReadFile("CA_crt.pem")
+	pem, err := os.ReadFile("CA_crt.pem")
 	if err != nil {
 		log.Fatalf("failed to load root CA certificates  error=%v", err)
 	}
@@ -51,7 +51,7 @@ func backendLBhandler(w http.ResponseWriter, r *http.Request) {
 
 	ce := credentials.NewTLS(&tlsCfg)
 
-	conn, err := grpc.Dial("dns:///be-srv-lb.default.svc.cluster.local:50051", grpc.WithTransportCredentials(ce), grpc.WithBalancerName(roundrobin.Name))
+	conn, err := grpc.Dial("dns:///be-srv-lb.default.svc.cluster.local:50051", grpc.WithTransportCredentials(ce), grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -66,7 +66,7 @@ func backendLBhandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Coudl not greet ", http.StatusInternalServerError)
 		}
 		time.Sleep(1 * time.Second)
-		if (r != nil) {
+		if r != nil {
 			backendList = append(backendList, r.Message)
 		}
 	}
@@ -91,7 +91,6 @@ func backendhandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Backend Handler")
 
 	ctx := context.Background()
-
 
 	var tlsCfg tls.Config
 	rootCAs := x509.NewCertPool()

@@ -125,18 +125,20 @@ The effective configuration for the HealthCheck Proxy then handles TLS from GCP'
 ```bash
 
 $ gcloud container  clusters create cluster-grpc \
-   --zone us-central1-a  --num-nodes 3 --enable-ip-alias \
-   --cluster-version "1.19"
+   --zone us-central1-a  --num-nodes 3 --enable-ip-alias 
 ```
 
 
 If using ILB, see [Setting up ILB Subnet](https://cloud.google.com/load-balancing/docs/l7-internal/setting-up-l7-internal#configuring_the_proxy-only_subnet)
 
 first create an ILB subnet in the appropriate range (in this case, its `10.5.0.0/20`)
+
 ```bash
-$ gcloud compute networks subnets create proxy-only-subnet  \
-   --purpose=INTERNAL_HTTPS_LOAD_BALANCER   --role=ACTIVE \
-   --region=us-central1   --network=default   --range=10.5.0.0/20
+$ gcloud compute firewall-rules create allow-grpc-inbound-50051  --action allow --direction INGRESS    --source-ranges 0.0.0.0/0     --rules tcp:50051
+
+$ gcloud compute networks subnets create proxy-only-subnet \
+  --purpose=REGIONAL_MANAGED_PROXY     --role=ACTIVE  
+   --region=us-central1     --network=default     --range=192.168.0.0/23   
 ```
 
 Then, 
