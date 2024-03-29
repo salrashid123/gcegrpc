@@ -9,7 +9,7 @@ Demonstrates gRPC loadbalancing with Istio where mesh-external clients connect v
 - `client_grpc_app (external) --> (GCP ExternalLB) --> Istio --> Service`
 
 
-- uses ISTIO version `1.8.1`
+- uses ISTIO version `1.21.0`
 
 1) Install GKE+Istio
 
@@ -133,6 +133,7 @@ as well as the serivce on GKE console
 ### Verify External client connectivity
 
 wait about 10mins (really, you need to wait)
+
 ```bash
 docker  run --add-host grpc.domain.com:$GATEWAY_IP -t salrashid123/grpc_backend /grpc_client --host grpc.domain.com:443
 ```

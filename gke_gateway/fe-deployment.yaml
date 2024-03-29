@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fe-deployment
+  labels:
+    app: fe
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fe
+  template:
+    metadata:
+      labels:
+        app: fe
+    spec:
+      containers:
+      - name: hc-proxy
+        image: docker.io/salrashid123/grpc_health_proxy:1.0.0
+        args: [
+          "--http-listen-addr=0.0.0.0:8080",
+          "--grpcaddr=localhost:50051",
+          "--service-name=echo.EchoServer",
+          "--https-listen-ca=/config/CA_crt_hc.pem",
+          "--https-listen-cert=/certs/http_server_crt.pem",
+          "--https-listen-key=/certs/http_server_key.pem",
+          "--grpctls",        
+          "--grpc-sni-server-name=grpc.domain.com",
+          "--grpc-ca-cert=/config/CA_crt_grpc_server.pem",
+          "--logtostderr=1",
+          "-v=1"
+        ]
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: config-vol
+          mountPath: /config
+          readOnly: true
+        - name: certs-vol
+          mountPath: /certs
+          readOnly: true          
+      - name: grpc-app
+        image: salrashid123/grpc_only_backend
+        args: [
+          "/grpc_server",
+          "--grpcport=0.0.0.0:50051",
+          "--tlsCert=/certs/grpc_server_crt.pem",
+          "--tlsKey=/certs/grpc_server_key.pem"        
+        ]
+        ports:
+        - containerPort: 50051
+        volumeMounts:
+          - name: grpc-certs-vol
+            mountPath: /certs
+            readOnly: true          
+      volumes:
+      - name: config-vol
+        configMap:
+          name: settings
+          items:
+          - key: "CA_crt_hc.pem"
+            path: "CA_crt_hc.pem"
+          - key: "CA_crt_grpc_server.pem"
+            path: "CA_crt_grpc_server.pem"
+      - name: certs-vol
+        secret:
+          secretName: hc-secret
+          items:
+          - key: http_server_crt.pem
+            path: http_server_crt.pem
+          - key: http_server_key.pem
+            path: http_server_key.pem
+      - name: grpc-certs-vol
+        secret:
+          secretName: grpc-secret
+          items:
+          - key: grpc_server_crt.pem
+            path: grpc_server_crt.pem
+          - key: grpc_server_key.pem
+            path: grpc_server_key.pem
+

@@ -1,0 +1,40 @@
+---
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1beta1
+metadata:
+  name: gke-l7-rilb-gw
+  namespace: default
+spec:
+  gatewayClassName: gke-l7-rilb
+  listeners:  
+  - name: http
+    protocol: HTTPS
+    port: 443
+    tls:      
+      mode: Terminate
+      options:
+        networking.gke.io/pre-shared-certs: gcp-cert-grpc-us-central
+      # certificateRefs:
+      # - kind: Secret
+      #   group: ""
+      #   name: fe-secret
+---
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1beta1
+metadata:
+  name: gke-l7-gxlb-gw
+  namespace: default
+spec:
+  gatewayClassName: gke-l7-global-external-managed
+  listeners:  
+  - protocol: HTTPS
+    name: http
+    port: 443
+    tls:      
+      mode: Terminate
+      options:
+        networking.gke.io/pre-shared-certs: gcp-cert-grpc-global
+      # certificateRefs:
+      # - kind: Secret
+      #   group: ""
+      #   name: fe-secret

@@ -11,6 +11,11 @@ Samples for running gRPC on GKE and Istio:
 
 - Folder: [gke_ingress_lb/](gke_ingress_lb/)
 
+## gRPC Loadbalancing on GKE Gateway
+
+`client_grpc_app  (via gRPC wire protocol) --> Gateway --> (grpc Service on GKE)`
+
+- Folder: [gke_gateway/](gke_gateway/)
 
 ## gRPC Loadbalancing on GKE with TrafficDirector (xds loadbalancing)
 

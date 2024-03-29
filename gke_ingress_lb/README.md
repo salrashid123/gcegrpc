@@ -5,125 +5,11 @@ Sample showing gRPC clients connecting via Ingress.
 In this mode one gRPC connection sends 10 rpc messages.  Ingress L7 intercepts the ssl connection and then transmits each RPC back to different pods.
 Since each RPC goes to different endpoints, the load is more evenly distributed between all pods.
 
->> **Update 8/10/20**:  GCP now support a BackendConfig that supports independent HealthChecks over HTTP that Ingress understands:
 
-- [Custom health check configuration](https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-features#direct_health)
-
-
-The BackendConfig makes the workarounds using mux and envoy described in previous commits in this repo obsolete but you still need an a POD that proxies HTTP healthcheck requests.
-
-You still need to run an HTTP listener Container on the same gRPC Service POD (ie run your grpc service in one container and run an http proxy healthcheck in another).  Previously, you had to effectively run HTTP and gRPC on the same Serving Port.
-
-For example, you can run an HTTP listener on `:8080` and a GRPC service on `:50051`.  GCP will send healthcheck requests to `:8080` which makes a GRPC healtcheck request internally to `:50051`
-
-- `podSpec(http_grpc_proxy:8080, grpc_service:50051)`
-
-The following [grpc_health_proxy](https://github.com/salrashid123/grpc_health_proxy) translates HTTP requests into gRPC HealCheck Protocol.
-
-To deploy, start GKE Cluster `1.18` or higher
-
-```
-gcloud container  clusters create cluster-grpc \
- --zone us-central1-a  --num-nodes 3 --enable-ip-alias
-```
-
-```bash
-cd gcegrpc/gke_ingress_lb
-kubectl apply -f .
-```
-
-Wait for the Ingress and Loadbalancer configurations to allocate an IP and test as described below.
-(wait maybe 8mins)
-
-
-Look at `fe-srv-ingress.yaml` file for the `BackendConfig`:
-
-
-```yaml
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: fe-srv-ingress
-  labels:
-    type: fe-srv
-  annotations:
-    cloud.google.com/app-protocols: '{"fe":"HTTP2"}'
-    cloud.google.com/neg: '{"ingress": true, "exposed_ports": {"50051":{}}}'
-    cloud.google.com/backend-config: '{"default": "fe-grpc-backendconfig"}'
-spec:
-  type: ClusterIP 
-  ports:
-  - name: fe
-    port: 50051
-    protocol: TCP
-    targetPort: 50051
-  selector:
-    app: fe
----
-apiVersion: cloud.google.com/v1
-kind: BackendConfig
-metadata:
-  name: fe-grpc-backendconfig
-spec:
-  healthCheck:
-    type: HTTP2
-    requestPath: /
-    port: 8080
-```
-
-
-What that describes is http healthcheck that will send requests to `/` on port `:8080`.  The Ingress rule specifies HTTP2 traffic to port `:50051` for `selector: app:fe` and also uses the healthchecks defined by `fe-grpc-backendconfig`.
-
-See [Creating a Service for a container-native load balancer](https://cloud.google.com/kubernetes-engine/docs/how-to/container-native-load-balancing)
-
->>  A Service of type ClusterIP is recommended unless you explicitly need the nodePort provided by a NodePort Service.
-
-
->> **NOTE**: HTTP2 Healthchecks on GCP _requires_ https ([health-check-concepts](https://cloud.google.com/load-balancing/docs/health-check-concepts#category_and_protocol))
-
-A couple of notes about SSL.  The configuration described in this article uses TLS from start to finish:
-
-- `client -> SSL -> L7LB (ingress) -> SSL -> (gRPC Application Service)`
-- `GCP HTTP2 Healtcheck -> SSL -> (healthCheck Proxy) --> SSL (gRPC HealthCheck Service)`
-
-The effective configuration for the HealthCheck Proxy then handles TLS from GCP's Healthcheck and also makes a new TLS connection to the service POD
-```yaml
-    spec:
-      containers:
-      - name: hc-proxy
-        image: docker.io/salrashid123/grpc_health_proxy:1.0.0
-        args: [
-          "--http-listen-addr=0.0.0.0:8080",
-          "--grpcaddr=localhost:50051",
-          "--service-name=echo.EchoServer",
-          "--https-listen-ca=/config/CA_crt_hc.pem",
-          "--https-listen-cert=/certs/http_server_crt.pem",
-          "--https-listen-key=/certs/http_server_key.pem",
-          "--grpctls",        
-          "--grpc-sni-server-name=grpc.domain.com",
-          "--grpc-ca-cert=/config/CA_crt_grpc_server.pem",
-          "--logtostderr=1",
-          "-v=1"
-        ]
-      - name: grpc-app
-        image: salrashid123/grpc_only_backend
-        args: [
-          "/grpc_server",
-          "--grpcport=0.0.0.0:50051",
-          "--tlsCert=/certs/grpc_server_crt.pem",
-          "--tlsKey=/certs/grpc_server_key.pem"        
-        ]
-        ports:
-        - containerPort: 50051    
-```
-
----
 
 ## Setup
 
 ```bash
-
 $ gcloud container  clusters create cluster-grpc \
    --zone us-central1-a  --num-nodes 3 --enable-ip-alias 
 ```
@@ -131,14 +17,14 @@ $ gcloud container  clusters create cluster-grpc \
 
 If using ILB, see [Setting up ILB Subnet](https://cloud.google.com/load-balancing/docs/l7-internal/setting-up-l7-internal#configuring_the_proxy-only_subnet)
 
-first create an ILB subnet in the appropriate range (in this case, its `10.5.0.0/20`)
+first create an ILB subnet in the appropriate range (in this case, its `192.168.0.0/23`)
 
 ```bash
 $ gcloud compute firewall-rules create allow-grpc-inbound-50051  --action allow --direction INGRESS    --source-ranges 0.0.0.0/0     --rules tcp:50051
 
 $ gcloud compute networks subnets create proxy-only-subnet \
-  --purpose=REGIONAL_MANAGED_PROXY     --role=ACTIVE  
-   --region=us-central1     --network=default     --range=192.168.0.0/23   
+  --purpose=REGIONAL_MANAGED_PROXY     --role=ACTIVE \
+    --region=us-central1     --network=default     --range=192.168.0.0/23   
 ```
 
 Then, 
