@@ -4,9 +4,10 @@ kind: Service
 metadata:
   name: fe-srv-td
   labels:
-    type: fe-srv
+    type: fe-srv-td
   annotations:
-    cloud.google.com/neg: '{"exposed_ports": {"50051":{}}}'
+    cloud.google.com/app-protocols: '{"fe":"HTTP2"}'
+    cloud.google.com/neg: '{"exposed_ports":{"50051":{"name": "fe-srv-td"}}}'
 spec:
   type: ClusterIP 
   ports:

@@ -95,7 +95,8 @@ service/kubernetes   ClusterIP      10.23.240.1     <none>           443/TCP    
 	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(ce))
 ```
 
-```
+```bash
+## run curl and wait 10s
 $ curl -sk https://35.226.254.240:8081/backend | jq '.'
 {
   "frontend": "fe-deployment-59d7bb7df8-w4fwc",
@@ -130,7 +131,8 @@ import (
 ```
 
 
-```
+```bash
+## run curl and wait 10s
 $ curl -sk https://35.226.254.240:8081/backendlb | jq '.'
 {
   "frontend": "fe-deployment-59d7bb7df8-w4fwc",

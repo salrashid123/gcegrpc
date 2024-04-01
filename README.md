@@ -2,7 +2,7 @@
 # gRPC on GKE and Istio
 
 
-Samples for running gRPC on GKE and Istio:
+Samples for running gRPC on GKE, Istio, Gateway, Ingress, GCE VMs and Traffic Director:
 
 
 ## gRPC Loadbalancing on GKE with L7 Ingress

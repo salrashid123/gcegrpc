@@ -23,5 +23,6 @@ spec:
           "--insecure"     
         ]
         ports:
-        - containerPort: 50051
+        - protocol: TCP
+          containerPort: 50051
 
