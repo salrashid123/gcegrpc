@@ -26,5 +26,5 @@ metadata:
 spec:
   healthCheck:
     type: HTTP2
-    requestPath: /
+    requestPath: /healthz?serviceName=echo.EchoServer
     port: 8080

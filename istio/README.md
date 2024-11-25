@@ -9,13 +9,13 @@ Demonstrates gRPC loadbalancing with Istio where mesh-external clients connect v
 - `client_grpc_app (external) --> (GCP ExternalLB) --> Istio --> Service`
 
 
-- uses ISTIO version `1.21.0`
+- uses ISTIO version `1.24.0`
 
 1) Install GKE+Istio
 
 ```bash
 gcloud container  clusters create istio-1 --machine-type "n1-standard-2" --zone us-central1-a  --num-nodes 4 \
-   --enable-ip-alias  -q
+   --enable-ip-alias  --enable-l4-ilb-subsetting -q
 
 gcloud container clusters get-credentials istio-1 --zone us-central1-a
 
@@ -23,7 +23,8 @@ kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-ad
 
 kubectl create ns istio-system
 
-export ISTIO_VERSION=1.21.0
+export ISTIO_VERSION=1.24.0
+export ISTIO_VERSION_MINOR=1.24
 
 wget -P /tmp/ https://github.com/istio/istio/releases/download/$ISTIO_VERSION/istio-$ISTIO_VERSION-linux-amd64.tar.gz
 tar xvf /tmp/istio-$ISTIO_VERSION-linux-amd64.tar.gz -C /tmp/
@@ -35,9 +36,18 @@ istioctl install --set profile=demo \
  --set meshConfig.enableAutoMtls=true  \
  --set values.gateways.istio-ingressgateway.runAsRoot=true \
  --set meshConfig.outboundTrafficPolicy.mode=REGISTRY_ONLY \
+ --set meshConfig.defaultConfig.gatewayTopology.forwardClientCertDetails=SANITIZE_SET \
  -f overlay-istio-gateway.yaml
 
+
 kubectl label namespace default istio-injection=enabled
+
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-$ISTIO_VERSION_MINOR/samples/addons/prometheus.yaml
+sleep 20
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-$ISTIO_VERSION_MINOR/samples/addons/kiali.yaml
+## optionally view the kiali dash
+## kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app.kubernetes.io/name=kiali -o jsonpath='{.items[0].metadata.name}') 20001:20001
+#### http://localhost:20001/kiali
 ```
 
 
@@ -91,7 +101,7 @@ The grpc application creates one gRPC Channel to the server and on that one conn
 
 ```bash
 kubectl apply -f fe-certs.yaml
-
+sleep 5
 kubectl apply -f all-istio.yaml 
 
 kubectl apply -f istio-fe.yaml \

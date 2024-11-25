@@ -10,6 +10,8 @@ Sample showing gRPC clients connecting via GKE Gateway.
 * Enable Gateways to handle both internet facing and internal-only traffic.
 * Verify gRPC LoadBalancing through Gateway
 
+>> note that GKE does [not support TLS grpc healthchecks](https://cloud.google.com/load-balancing/docs/health-check-concepts#criteria-protocol-grpc).  Since the gRPC service in this example uses TLS, we use a http->grpc healthcheck proxy
+
 ```bash
 gcloud container  clusters create cluster-grpc \
    --zone us-central1-a --gateway-api=standard --num-nodes 3 --enable-ip-alias
@@ -52,6 +54,9 @@ gatewayclass.gateway.networking.k8s.io/gke-l7-rilb                        networ
 NAME                                               CLASS                            ADDRESS          PROGRAMMED   AGE
 gateway.gateway.networking.k8s.io/gke-l7-gxlb-gw   gke-l7-global-external-managed   34.102.243.138   True         2m59s
 gateway.gateway.networking.k8s.io/gke-l7-rilb-gw   gke-l7-rilb                      10.128.0.28      True         2m59s
+
+
+kubectl describe gateway gke-l7-gxlb-gw
 ```
 
 

@@ -1,0 +1,24 @@
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: gke-hc
+  namespace: default
+spec:
+  default:
+    checkIntervalSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 3
+    config:
+      type: HTTP2
+      http2HealthCheck:
+        port: 8080
+        requestPath: /healthz?serviceName=echo.EchoServer
+
+      # type: GRPC
+      # grpcHealthCheck:
+      #   grpcServiceName: echo.EchoServer
+      #   port: 50051
+  targetRef:
+    group: ""
+    kind: Service
+    name: fe-srv

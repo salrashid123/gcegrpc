@@ -7,7 +7,7 @@ metadata:
     type: fe-srv
   annotations:
     cloud.google.com/app-protocols: '{"fe":"HTTP2"}'
-    cloud.google.com/backend-config: '{"default": "fe-grpc-backendconfig"}'
+    # cloud.google.com/backend-config: '{"default": "fe-grpc-backendconfig"}'
 spec:
   type: ClusterIP 
   ports:
